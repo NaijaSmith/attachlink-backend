@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "log_entries")
@@ -17,17 +18,38 @@ public class LogEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Date the log refers to (e.g., Day 5 of attachment)
+    @Column(nullable = false)
     private LocalDate logDate;
 
-    @Column(length = 1000)
+    // What the student did on that day
+    @Column(nullable = false, length = 1500)
     private String description;
 
+    // Optional link to uploaded evidence (PDF, image, etc.)
+    @Column(length = 500)
     private String evidenceUrl;
 
-    private String status;
     // SUBMITTED, REVIEWED, REJECTED
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private LogStatus status;
 
-    @ManyToOne
+    // Supervisor comment after review
+    @Column(length = 1000)
+    private String supervisorComment;
+
+    // When the log was submitted
+    @Column(nullable = false)
+    private LocalDateTime submittedAt;
+
+    // When the supervisor reviewed the log
+    private LocalDateTime reviewedAt;
+
+    // Many logs belong to one student (User)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
-    private Student student;
+    private User student;
+
+
 }
