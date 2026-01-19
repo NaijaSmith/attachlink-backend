@@ -26,4 +26,10 @@ public class User {
     // STUDENT, SUPERVISOR, EMPLOYER, ADMIN
 
     private boolean active = true;
+
+    @Column(length = 100)
+    private String fullName;
+
+    @Column(length = 20)
+    private String registrationNumber;
 }

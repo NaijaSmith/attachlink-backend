@@ -20,15 +20,57 @@ public class AuthService {
 
     public void register(RegisterRequest request) {
 
+        // Normalize role
+        String role = request.getRole() == null
+                ? null
+                : request.getRole().trim().toUpperCase();
+
+        // 1️⃣ Validate role
+        if (!isValidRole(role)) {
+            throw new IllegalArgumentException("Invalid role provided");
+        }
+
+        // 2️⃣ Enforce STUDENT-only fields
+        if ("STUDENT".equals(role)) {
+            if (isBlank(request.getFullName())
+                    || isBlank(request.getRegistrationNumber())) {
+
+                throw new IllegalArgumentException(
+                        "Students must provide full name and registration number"
+                );
+            }
+        }
+
+        // 3️⃣ Check email uniqueness
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists");
         }
 
+        // 4️⃣ Create user
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(request.getRole().toUpperCase());
+        user.setRole(role);
+
+        // Only students get these fields populated
+        if ("STUDENT".equals(role)) {
+            user.setFullName(request.getFullName());
+            user.setRegistrationNumber(request.getRegistrationNumber());
+        }
 
         userRepository.save(user);
+    }
+
+    // ===== Helpers =====
+
+    private boolean isValidRole(String role) {
+        return "STUDENT".equals(role)
+            || "SUPERVISOR".equals(role)
+            || "EMPLOYER".equals(role)
+            || "ADMIN".equals(role);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }
