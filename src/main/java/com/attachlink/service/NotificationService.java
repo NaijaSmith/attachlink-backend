@@ -12,22 +12,30 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private FcmService fcmService;
 
-    public NotificationService(NotificationRepository notificationRepository) {
+    public NotificationService(NotificationRepository notificationRepository, FcmService fcmService) {
         this.notificationRepository = notificationRepository;
+        this.fcmService = fcmService;
     }
 
     // Create notification
-    public void notify(User user, String message) {
+public void notify(User user, String message) {
 
-        Notification notification = new Notification();
-        notification.setUser(user);
-        notification.setMessage(message);
-        notification.setCreatedAt(LocalDateTime.now());
-        notification.setReadStatus(false);
+    Notification notification = new Notification();
+    notification.setUser(user);
+    notification.setMessage(message);
+    notification.setCreatedAt(LocalDateTime.now());
+    notification.setReadStatus(false);
+    notificationRepository.save(notification);
 
-        notificationRepository.save(notification);
+    // ✅ Push notification if token exists
+    if (user.getFcmToken() != null && !user.getFcmToken().isBlank()) {
+        fcmService.sendPush(user.getFcmToken(),
+                "AttachLink Update", message);
     }
+}
+
 
     // Get user notifications
     public List<Notification> getUserNotifications(User user) {

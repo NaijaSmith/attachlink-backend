@@ -6,8 +6,6 @@ import com.attachlink.entity.User;
 import com.attachlink.repository.EmployerFeedbackRepository;
 import com.attachlink.repository.LogEntryRepository;
 import org.springframework.stereotype.Service;
-import com.attachlink.entity.Student;
-
 import java.util.stream.Collectors;
 
 @Service

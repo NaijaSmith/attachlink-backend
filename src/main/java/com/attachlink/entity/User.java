@@ -25,11 +25,14 @@ public class User {
     private String role;
     // STUDENT, SUPERVISOR, EMPLOYER, ADMIN
 
-    private boolean active = true;
-
     @Column(length = 100)
     private String fullName;
 
     @Column(length = 20)
     private String registrationNumber;
+
+    @Column(length = 255)
+    private String fcmToken;
+    
+    private boolean active = true;
 }
