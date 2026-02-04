@@ -13,29 +13,37 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(
-            HttpSecurity http,
-            JwtAuthenticationFilter jwtFilter) throws Exception {
-
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
-            .sessionManagement(session ->
+            .sessionManagement(session -> 
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/supervisor/**").hasAuthority("SUPERVISOR")
-                .requestMatchers("/api/employer/**").hasAuthority("EMPLOYER")
+
+                // REFINE: Use hasRole(). This expects authorities like "ROLE_STUDENT"
+                .requestMatchers("/api/supervisor/**").hasRole("SUPERVISOR")
+                .requestMatchers("/api/employer/**").hasRole("EMPLOYER")
+                .requestMatchers("/api/logs/**").hasRole("STUDENT")
+                
+                // Authenticated endpoints
+                .requestMatchers("/api/test/**", 
+                                 "/api/notifications/**", 
+                                 "/api/analytics/**", 
+                                 "/api/reports/**", 
+                                 "/api/fcm/**").authenticated()
+
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtFilter,
-                    UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -43,10 +51,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList("*"));
+        config.setAllowedOrigins(List.of("*")); // For dev only
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(Arrays.asList("*"));
-        config.setAllowCredentials(false);
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(false); // Must be false if origins is "*"
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
@@ -54,8 +62,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 }

@@ -5,10 +5,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "users")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class User {
 
     @Id
@@ -22,16 +19,15 @@ public class User {
     private String password;
 
     @Column(nullable = false)
-    private String role;
-    // STUDENT, SUPERVISOR, EMPLOYER, ADMIN
+    private String role; 
 
-    @Column(length = 100)
+    @Column(name = "full_name", length = 100)
     private String fullName;
 
-    @Column(length = 20)
+    @Column(name = "registration_number", length = 20)
     private String registrationNumber;
 
-    @Column(length = 255)
+    @Column(name = "fcm_token", length = 255)
     private String fcmToken;
     
     private boolean active = true;

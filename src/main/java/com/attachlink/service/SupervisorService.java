@@ -30,13 +30,25 @@ public class SupervisorService {
 
     /**
      * Review a specific log entry
-     * Supervisor can APPROVE (REVIEWED) or REJECT
+     * Supervisor can APPROVE or REJECT
      */
     public LogEntry reviewLog(Long logId, LogReviewRequest request) {
 
         LogEntry log = logEntryRepository.findById(logId)
                 .orElseThrow(() ->
                         new RuntimeException("Log entry not found"));
+
+        // Validate that log is in SUBMITTED status
+        if (!LogStatus.SUBMITTED.equals(log.getStatus())) {
+            throw new RuntimeException("Log entry is not in SUBMITTED status for review");
+        }
+
+        // Validate status is either APPROVED or REJECTED
+        if (request.getStatus() == null || 
+            (!LogStatus.APPROVED.equals(request.getStatus()) && 
+             !LogStatus.REJECTED.equals(request.getStatus()))) {
+            throw new RuntimeException("Invalid status. Must be APPROVED or REJECTED");
+        }
 
         // Update log review details
         log.setStatus(request.getStatus());
