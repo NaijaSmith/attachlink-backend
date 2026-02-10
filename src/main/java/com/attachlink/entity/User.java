@@ -29,6 +29,9 @@ public class User {
 
     @Column(name = "fcm_token", length = 255)
     private String fcmToken;
+
+    @Column(nullable = false)
+    private String institutionName;
     
     private boolean active = true;
 }

@@ -29,7 +29,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
 
-                // REFINE: Use hasRole(). This expects authorities like "ROLE_STUDENT"
+                // REFINE: Use hasRole()
                 .requestMatchers("/api/supervisor/**").hasRole("SUPERVISOR")
                 .requestMatchers("/api/employer/**").hasRole("EMPLOYER")
                 .requestMatchers("/api/logs/**").hasRole("STUDENT")
@@ -39,7 +39,8 @@ public class SecurityConfig {
                                  "/api/notifications/**", 
                                  "/api/analytics/**", 
                                  "/api/reports/**", 
-                                 "/api/fcm/**").authenticated()
+                                 "/api/fcm/**",
+                                 "/api/auth/me").authenticated()
 
                 .anyRequest().authenticated()
             )
