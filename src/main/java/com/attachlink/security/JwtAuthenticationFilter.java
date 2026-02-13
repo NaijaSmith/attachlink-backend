@@ -1,3 +1,16 @@
+/*Copyright 2026 Nicholas Kariuki Wambui
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License. */
 package com.attachlink.security;
 
 import jakarta.servlet.FilterChain;
@@ -31,7 +44,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return path.startsWith("/api/auth/");
+        // Skip filter ONLY for public auth endpoints
+        // This ensures /api/auth/me is PROCESSED by this filter
+        return path.equals("/api/auth/login") || path.equals("/api/auth/register");
     }
 
     @Override
@@ -41,37 +56,44 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
+        // 1. Check if the header is present and formatted correctly
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
+        // 2. Extract the token
         String token = authHeader.substring(7).trim();
 
         try {
             String username = jwtUtil.extractUsername(token);
 
+            // 3. If username is found and user is not already authenticated
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 
-                // Load user details (this includes roles logic from CustomUserDetailsService)
+                // 4. Load UserDetails (using the refined CustomUserDetailsService)
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                // Optional: Validate token expiration here if not done in extractUsername
-                 if (jwtUtil.isTokenValid(token, userDetails.getUsername())) {
+                // 5. Validate the token against the loaded UserDetails
+                if (jwtUtil.isTokenValid(token, userDetails.getUsername())) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
                             userDetails.getAuthorities()
                     );
+                    
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    
+                    // 6. Set the authentication in the Security Context
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                 }
+                }
             }
         } catch (Exception ex) {
-            // Log the error so you know WHY auth failed
-            logger.error("Could not set user authentication in security context", ex);
+            // Log the error for easier debugging
+            logger.error("Authentication failed: ", ex);
         }
 
+        // 7. Continue the filter chain
         filterChain.doFilter(request, response);
     }
 }
