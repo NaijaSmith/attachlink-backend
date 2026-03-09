@@ -40,10 +40,14 @@ public class User {
     @Column(name = "registration_number", length = 20)
     private String registrationNumber;
 
+    // ADDED: Course field for students
+    @Column(name = "course", length = 100)
+    private String course;
+
     @Column(name = "fcm_token", length = 255)
     private String fcmToken;
 
-    @Column(nullable = false)
+    @Column(name = "institution_name", nullable = false)
     private String institutionName;
     
     private boolean active = true;
