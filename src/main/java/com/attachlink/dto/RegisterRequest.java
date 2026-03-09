@@ -16,6 +16,9 @@
 package com.attachlink.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,8 +26,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * Data Transfer Object for user registration.
- * This class handles the mapping between the JSON sent by the Android app
- * and the Java object used by the backend.
+ * Handles mapping between JSON from the Android client and the Spring Boot backend.
  */
 @Data
 @Builder
@@ -32,41 +34,34 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RegisterRequest {
 
+    @NotBlank(message = "Email is required")
+    @Email(message = "Please provide a valid email address")
     private String email;
-    
+
+    @NotBlank(message = "Password is required")
+    @Size(min = 6, message = "Password must be at least 6 characters long")
     private String password;
-    
+
+    @NotBlank(message = "User role is required")
     private String role;
-    
+
+    @NotBlank(message = "Full name is required")
     private String fullName;
-    
+
     private String registrationNumber;
 
-    private String institutionName; 
+    @JsonProperty("institution")
+    private String institutionName;
 
     private String course;
 
-    // Explicit Getters and Setters provided for compatibility 
-    // (Lombok @Data already generates these at compile time)
+    /**
+     * ID of the selected Academic Supervisor (Mandatory for Student role)
+     */
+    private Long supervisorId;
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
-
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
-
-    public String getRegistrationNumber() { return registrationNumber; }
-    public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }
-
-    public String getInstitutionName() { return institutionName; }
-    public void setInstitutionName(String institutionName) { this.institutionName = institutionName; }
-
-    public String getCourse() { return course; }
-    public void setCourse(String course) { this.course = course; }
+    /**
+     * ID of the selected Industry Employer (Mandatory for Student role)
+     */
+    private Long employerId;
 }

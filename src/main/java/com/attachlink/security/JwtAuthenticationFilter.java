@@ -1,16 +1,18 @@
-/*Copyright 2026 Nicholas Kariuki Wambui
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
+/*
+ * Copyright 2026 Nicholas Kariuki Wambui
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.attachlink.security;
 
 import jakarta.servlet.FilterChain;
@@ -28,6 +30,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * Filter responsible for JWT validation on every protected request.
+ * Refined to work with decoupled UserDetails and handle edge cases gracefully.
+ */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -41,59 +47,72 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.userDetailsService = userDetailsService;
     }
 
+    /**
+     * Determines if the filter should be skipped.
+     * Only skipped for strictly public write endpoints (Login/Register).
+     */
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
+    protected boolean shouldNotFilter( HttpServletRequest request) {
         String path = request.getServletPath();
-        // Skip filter ONLY for public auth endpoints
-        // This ensures /api/auth/me is PROCESSED by this filter
         return path.equals("/api/auth/login") || path.equals("/api/auth/register");
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
+        final String authHeader = request.getHeader("Authorization");
+        final String jwt;
+        final String userEmail;
 
-        // 1. Check if the header is present and formatted correctly
+        // 1. Early exit if header is missing or incorrect format
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 2. Extract the token
-        String token = authHeader.substring(7).trim();
+        // 2. Extract token safely
+        jwt = authHeader.substring(7).trim();
+        if (jwt.isEmpty()) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         try {
-            String username = jwtUtil.extractUsername(token);
+            userEmail = jwtUtil.extractUsername(jwt);
 
-            // 3. If username is found and user is not already authenticated
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            // 3. Process authentication if username exists and context is empty
+            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 
-                // 4. Load UserDetails (using the refined CustomUserDetailsService)
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                // Load UserDetails (this hits the refined CustomUserDetailsService)
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-                // 5. Validate the token against the loaded UserDetails
-                if (jwtUtil.isTokenValid(token, userDetails.getUsername())) {
+                // 4. Validate token against the immutable UserDetails DTO
+                if (jwtUtil.isTokenValid(jwt, userDetails.getUsername())) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
-                            null,
+                            null, // Credentials are not needed once authenticated via JWT
                             userDetails.getAuthorities()
                     );
-                    
+
+                    // Attach request-specific details (IP, Session ID, etc.)
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    
-                    // 6. Set the authentication in the Security Context
+
+                    // 5. Finalize the Security Context
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
         } catch (Exception ex) {
-            // Log the error for easier debugging
-            logger.error("Authentication failed: ", ex);
+            // Log specifically for JWT/Security issues without breaking the app
+            logger.error("Could not set user authentication in security context: {}", ex.getMessage());
+            // Clear context if something goes wrong during the auth process to be safe
+            SecurityContextHolder.clearContext();
         }
 
-        // 7. Continue the filter chain
+        // 6. Mandatory: Continue the filter chain
         filterChain.doFilter(request, response);
     }
 }

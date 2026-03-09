@@ -1,25 +1,31 @@
-/*Copyright 2026 Nicholas Kariuki Wambui
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
+/*
+ * Copyright (c) 2026 Nicholas Kariuki. All rights reserved.
+ *
+ * This software is the confidential and proprietary information of
+ * Nicholas Kariuki ("Confidential Information"). You shall not
+ * disclose such Confidential Information and shall use it only in
+ * accordance with the terms of the license agreement you entered into.
+ *
+ * Project: AttachLink
+ * Author: Nicholas Kariuki
+ */
 package com.attachlink.controller;
 
 import com.attachlink.dto.LogReviewRequest;
 import com.attachlink.service.SupervisorService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+
+/**
+ * REST Controller for Supervisor operations.
+ * Enforces security by using the authenticated Principal to filter data.
+ */
 @RestController
 @RequestMapping("/api/supervisor")
+@PreAuthorize("hasAnyRole('LECTURER', 'SUPERVISOR')")
 public class SupervisorController {
 
     private final SupervisorService supervisorService;
@@ -28,22 +34,50 @@ public class SupervisorController {
         this.supervisorService = supervisorService;
     }
 
-    // View logs awaiting review
-    @GetMapping("/logs")
-    public ResponseEntity<?> viewSubmittedLogs() {
+    /**
+     * Get a dashboard summary for the supervisor (e.g., pending logs count, total students).
+     */
+    @GetMapping("/dashboard/summary")
+    public ResponseEntity<?> getDashboardSummary(Principal principal) {
         return ResponseEntity.ok(
-                supervisorService.getSubmittedLogs()
+                supervisorService.getDashboardStats(principal.getName())
         );
     }
 
-    // Review log
-    @PostMapping("/logs/{logId}/review")
+    /**
+     * View all students currently assigned to this supervisor.
+     */
+    @GetMapping("/students")
+    public ResponseEntity<?> getAssignedStudents(Principal principal) {
+        return ResponseEntity.ok(
+                supervisorService.getAssignedStudents(principal.getName())
+        );
+    }
+
+    /**
+     * View logs awaiting review specifically for students assigned to the logged-in supervisor.
+     * @param principal The authenticated user (Supervisor/Lecturer)
+     */
+    @GetMapping("/logs/pending")
+    public ResponseEntity<?> viewSubmittedLogs(Principal principal) {
+        return ResponseEntity.ok(
+                supervisorService.getPendingLogsForSupervisor(principal.getName())
+        );
+    }
+
+    /**
+     * Review a specific log entry.
+     * The service layer will verify if the supervisor is authorized to review this specific log.
+     * Note: Using PATCH as it represents a partial update of the Log resource (status and feedback).
+     */
+    @PatchMapping("/logs/{logId}/review")
     public ResponseEntity<?> reviewLog(
             @PathVariable Long logId,
-            @RequestBody LogReviewRequest request) {
+            @RequestBody LogReviewRequest request,
+            Principal principal) {
 
         return ResponseEntity.ok(
-                supervisorService.reviewLog(logId, request)
+                supervisorService.reviewLog(logId, request, principal.getName())
         );
     }
 }

@@ -1,24 +1,18 @@
-/*Copyright 2026 Nicholas Kariuki Wambui
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
 package com.attachlink.controller;
 
+import com.attachlink.dto.NotificationDTO;
 import com.attachlink.entity.User;
 import com.attachlink.repository.UserRepository;
 import com.attachlink.service.NotificationService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -27,21 +21,42 @@ public class NotificationController {
     private final NotificationService notificationService;
     private final UserRepository userRepository;
 
-    public NotificationController(NotificationService notificationService,
-                                  UserRepository userRepository) {
+    public NotificationController(NotificationService notificationService, UserRepository userRepository) {
         this.notificationService = notificationService;
         this.userRepository = userRepository;
     }
 
     @GetMapping
-    public ResponseEntity<?> getMyNotifications(Authentication authentication) {
+    public ResponseEntity<List<NotificationDTO>> getMyNotifications(Authentication authentication) {
+        User user = getCurrentUser(authentication);
+        List<NotificationDTO> dtos = notificationService.getUserNotifications(user).stream()
+                .map(n -> new NotificationDTO(n.getId(), n.getMessage(), n.getCreatedAt(), n.isReadStatus()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
+    }
 
-        String email = authentication.getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow();
+    @PostMapping("/token")
+    public ResponseEntity<Void> updateDeviceToken(@RequestBody Map<String, String> payload, Authentication authentication) {
+        String token = payload.get("token");
+        if (token == null || token.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "FCM Token is missing");
+        }
+        User user = getCurrentUser(authentication);
+        notificationService.saveDeviceToken(user, token);
+        return ResponseEntity.noContent().build();
+    }
 
-        return ResponseEntity.ok(
-                notificationService.getUserNotifications(user)
-        );
+    @PatchMapping("/{notificationId}/read")
+    public ResponseEntity<Void> markAsRead(@PathVariable Long notificationId) {
+        notificationService.markAsRead(notificationId);
+        return ResponseEntity.noContent().build();
+    }
+
+    private User getCurrentUser(Authentication authentication) {
+        if (authentication == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated");
+        }
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 }

@@ -14,23 +14,39 @@ limitations under the License. */
 package com.attachlink.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
+/**
+ * Represents the profile information specific to an Academic Supervisor.
+ * Linked to the core User entity via a One-to-One relationship.
+ */
 @Entity
 @Table(name = "supervisors")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Supervisor {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Department is required")
+    @Column(name = "department", nullable = false)
     private String department;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @NotBlank(message = "Institution is required")
+    @Column(name = "institution", nullable = false)
+    private String institution;
+
+    /**
+     * Maps the supervisor profile to the core User account.
+     * Uses FetchType.LAZY to optimize data retrieval.
+     */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 }

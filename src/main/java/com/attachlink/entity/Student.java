@@ -14,25 +14,44 @@ limitations under the License. */
 package com.attachlink.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
+/**
+ * Represents the profile information specific to a Student user.
+ * Linked to the core User entity via a One-to-One relationship.
+ */
 @Entity
 @Table(name = "students")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Student {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Registration number is required")
+    @Column(name = "registration_number", unique = true, nullable = false)
     private String registrationNumber;
+
+    @NotBlank(message = "Course is required")
+    @Column(name = "course", nullable = false)
     private String course;
+
+    @NotBlank(message = "Institution is required")
+    @Column(name = "institution", nullable = false)
     private String institution;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    /**
+     * Maps the student profile to the core User account.
+     * We use FetchType.LAZY to optimize performance when the User details
+     * are not immediately required.
+     */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 }

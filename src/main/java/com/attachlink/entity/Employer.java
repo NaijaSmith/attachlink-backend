@@ -1,25 +1,33 @@
-/*Copyright 2026 Nicholas Kariuki Wambui
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
+/*
+ * Copyright 2026 Nicholas Kariuki Wambui
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.attachlink.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
+/**
+ * Entity representing an Employer profile in the AttachLink system.
+ * Linked to a base User account via a One-to-One relationship.
+ */
 @Entity
 @Table(name = "employers")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Employer {
@@ -28,10 +36,18 @@ public class Employer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Company name is required")
+    @Column(name = "company_name", nullable = false)
     private String companyName;
+
+    @NotBlank(message = "Contact person name is required")
+    @Column(name = "contact_person", nullable = false)
     private String contactPerson;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    /**
+     * The underlying user account associated with this employer profile.
+     */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 }

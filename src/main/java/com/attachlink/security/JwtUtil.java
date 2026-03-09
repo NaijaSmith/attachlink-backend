@@ -1,20 +1,23 @@
-/*Copyright 2026 Nicholas Kariuki Wambui
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
+/*
+ * Copyright 2026 Nicholas Kariuki Wambui
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.attachlink.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -22,15 +25,25 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.function.Function;
 
+/**
+ * Refined JWT Utility class using JJWT 0.11.x compatible syntax.
+ */
 @Component
 public class JwtUtil {
 
-    // IMPORTANT: In production, move this to application.properties
-    // Must be at least 64 characters long for HS512 or 32 for HS256
-    private static final String SECRET_STRING = "your_very_long_and_very_secure_secret_key_that_is_at_least_32_chars";
-    private final SecretKey key = Keys.hmacShaKeyFor(SECRET_STRING.getBytes(StandardCharsets.UTF_8));
+    // Using @Value allows you to keep the secret out of the code. 
+    // It defaults to your hardcoded string if the property is missing.
+    @Value("${jwt.secret:3a9d2c3c62bc6aae26d780c784d48519055a94ccb84f78217f39462f34bf70c9}")
+    private String secretKeyString;
 
     private final long expiration = 86400000; // 1 day in milliseconds
+
+    /**
+     * Internal helper to generate the SecretKey from the string.
+     */
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(secretKeyString.getBytes(StandardCharsets.UTF_8));
+    }
 
     // Generate token for a user
     public String generateToken(String username) {
@@ -38,7 +51,7 @@ public class JwtUtil {
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(key, SignatureAlgorithm.HS256)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
@@ -58,17 +71,24 @@ public class JwtUtil {
         return claimsResolver.apply(claims);
     }
 
+    /**
+     * Main parsing method using parserBuilder() for compatibility with 0.11.x
+     */
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(key)
+                .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
     }
 
     // Check if the token is expired
-    private Boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+    public Boolean isTokenExpired(String token) {
+        try {
+            return extractExpiration(token).before(new Date());
+        } catch (ExpiredJwtException e) {
+            return true;
+        }
     }
 
     // Validate the token against the username
@@ -77,7 +97,7 @@ public class JwtUtil {
             final String extractedUsername = extractUsername(token);
             return (extractedUsername.equals(username) && !isTokenExpired(token));
         } catch (JwtException | IllegalArgumentException e) {
-            // If token is malformed, expired, or signature is wrong
+            // Catches MalformedJwtException, SignatureException, etc.
             return false;
         }
     }

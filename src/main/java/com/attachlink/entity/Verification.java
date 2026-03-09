@@ -18,23 +18,34 @@ import lombok.*;
 
 import java.time.LocalDate;
 
+/**
+ * Entity representing the verification status of a User (Student).
+ * This links directly to the User entity instead of a separate Student repository.
+ */
 @Entity
 @Table(name = "verifications")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Verification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private boolean verified;
 
+    @Column(nullable = false)
     private LocalDate verificationDate;
 
-    @ManyToOne
-    @JoinColumn(name = "student_id", nullable = false)
-    private Student student;
+    /**
+     * The User associated with this verification.
+     * Updated from Student to User to follow the unified entity pattern.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 }

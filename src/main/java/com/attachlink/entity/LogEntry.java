@@ -1,55 +1,67 @@
-/*Copyright 2026 Nicholas Kariuki Wambui
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
+/*
+ * Copyright 2026 Nicholas Kariuki Wambui
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.attachlink.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "log_entries")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
 public class LogEntry {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "log_date", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_id", nullable = false)
+    private User student;
+
+    @Column(nullable = false)
     private LocalDate logDate;
 
-    @Column(nullable = false, length = 1500)
-    private String description;
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String activities;
 
-    @Column(name = "evidence_url", length = 500)
-    private String evidenceUrl;
+    // Added to match the Service requirements
+    @Column(columnDefinition = "TEXT")
+    private String challenges;
+
+    // Added to match the Service requirements
+    @Column(columnDefinition = "TEXT")
+    private String learningOutcomes;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private LogStatus status;
 
-    @Column(name = "supervisor_comment", length = 1000)
-    private String supervisorComment;
-
-    @Column(name = "submitted_at", nullable = false)
-    private LocalDateTime submittedAt;
-
-    @Column(name = "reviewed_at")
+    private LocalDateTime createdAt;
+    
     private LocalDateTime reviewedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_id", nullable = false)
-    private User student;
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        if (this.status == null) {
+            this.status = LogStatus.SUBMITTED;
+        }
+    }
 }

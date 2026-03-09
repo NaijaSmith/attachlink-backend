@@ -1,72 +1,50 @@
-/*Copyright 2026 Nicholas Kariuki Wambui
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
+/*
+ * Copyright 2026 Nicholas Kariuki Wambui
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.attachlink.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/**
+ * Data Transfer Object representing performance analytics for a specific student.
+ * Provides a summary of log activities and employer evaluations.
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class StudentAnalyticsResponse {
 
     private Long studentId;
+    
     private long totalLogs;
+    
     private long approvedLogs;
+    
     private long rejectedLogs;
+    
+    /**
+     * Percentage of logs approved (e.g., 85.5)
+     */
     private double approvalRate;
+    
+    /**
+     * Mean rating provided by the Industry Employer during log reviews
+     */
     private double averageEmployerRating;
-
-    public Long getStudentId() {
-        return studentId;
-    }
-
-    public void setStudentId(Long studentId) {
-        this.studentId = studentId;
-    }
-
-    public long getTotalLogs() {
-        return totalLogs;
-    }
-
-    public void setTotalLogs(long totalLogs) {
-        this.totalLogs = totalLogs;
-    }
-
-    public long getApprovedLogs() {
-        return approvedLogs;
-    }
-
-    public void setApprovedLogs(long approvedLogs) {
-        this.approvedLogs = approvedLogs;
-    }
-
-    public long getRejectedLogs() {
-        return rejectedLogs;
-    }
-
-    public void setRejectedLogs(long rejectedLogs) {
-        this.rejectedLogs = rejectedLogs;
-    }
-
-    public double getApprovalRate() {
-        return approvalRate;
-    }
-
-    public void setApprovalRate(double approvalRate) {
-        this.approvalRate = approvalRate;
-    }
-
-    public double getAverageEmployerRating() {
-        return averageEmployerRating;
-    }
-
-    public void setAverageEmployerRating(double averageEmployerRating) {
-        this.averageEmployerRating = averageEmployerRating;
-    }
 }

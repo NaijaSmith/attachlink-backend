@@ -1,24 +1,23 @@
-/*Copyright 2026 Nicholas Kariuki Wambui
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License. */
+/*
+ * Copyright (c) 2026 Nicholas Kariuki. All rights reserved.
+ */
 package com.attachlink.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Core User entity for AttachLink.
+ * Handles authentication and acts as a root for Student/Supervisor profiles.
+ */
 @Entity
 @Table(name = "users")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter 
+@Setter 
+@NoArgsConstructor 
+@AllArgsConstructor
+@Builder
 public class User {
 
     @Id
@@ -28,27 +27,85 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 
     @Column(nullable = false)
-    private String role; 
+    private String role; // STUDENT, SUPERVISOR, EMPLOYER, ADMIN
 
     @Column(name = "full_name", length = 100)
     private String fullName;
 
-    @Column(name = "registration_number", length = 20)
-    private String registrationNumber;
+    @Column(name = "institution_name")
+    private String institutionName;
 
-    // ADDED: Course field for students
-    @Column(name = "course", length = 100)
-    private String course;
-
-    @Column(name = "fcm_token", length = 255)
+    @Column(name = "fcm_token")
     private String fcmToken;
 
-    @Column(name = "institution_name", nullable = false)
-    private String institutionName;
-    
+    @Column(nullable = false)
+    @Builder.Default
     private boolean active = true;
+
+    // --- RELATIONSHIPS TO SPECIFIC TABLES ---
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Student studentProfile;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Supervisor supervisorProfile;
+
+    // --- SELF-REFERENCING LINKS (Hierarchy Management) ---
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "supervisor_id")
+    @JsonIgnore 
+    private User assignedSupervisor;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employer_id")
+    @JsonIgnore
+    private User assignedEmployer;
+
+    // --- HELPER PROXY METHODS (Fixes Controller/Service Errors) ---
+
+    /**
+     * Proxies the registration number from the Student profile.
+     */
+    public String getRegistrationNumber() {
+        return (studentProfile != null) ? studentProfile.getRegistrationNumber() : "N/A";
+    }
+
+    /**
+     * Proxies the assigned supervisor.
+     */
+    public User getSupervisor() {
+        return assignedSupervisor;
+    }
+
+    /**
+     * Extracts the first name from the full name for greetings and file exports.
+     */
+    public String getFirstName() {
+        if (fullName == null || fullName.trim().isEmpty()) return "User";
+        return fullName.trim().split("\\s+")[0];
+    }
+
+    // --- ROLE CHECKS ---
+
+    public boolean isStudent() { 
+        return "STUDENT".equalsIgnoreCase(this.role); 
+    }
+    
+    public boolean isSupervisor() { 
+        return "SUPERVISOR".equalsIgnoreCase(this.role); 
+    }
+    
+    public boolean isEmployer() { 
+        return "EMPLOYER".equalsIgnoreCase(this.role); 
+    }
+    
+    public boolean isAdmin() { 
+        return "ADMIN".equalsIgnoreCase(this.role); 
+    }
 }
