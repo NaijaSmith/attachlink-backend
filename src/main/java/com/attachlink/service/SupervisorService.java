@@ -58,7 +58,7 @@ public class SupervisorService {
                 .orElseThrow(() -> new RuntimeException("Supervisor not found"));
 
         long totalStudents = userRepository.countBySupervisor(supervisor);
-        long pendingLogs = logEntryRepository.countByStudentSupervisorAndStatus(supervisor, LogStatus.SUBMITTED);
+        long pendingLogs = logEntryRepository.countByStudent_SupervisorAndStatus(supervisor, LogStatus.SUBMITTED);
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalStudents", totalStudents);
@@ -84,7 +84,7 @@ public class SupervisorService {
         User supervisor = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Supervisor account not found"));
 
-        return logEntryRepository.findAllByStudentSupervisorAndStatus(supervisor, LogStatus.SUBMITTED);
+        return logEntryRepository.findAllByStudent_SupervisorAndStatus(supervisor, LogStatus.SUBMITTED);
     }
 
     /**

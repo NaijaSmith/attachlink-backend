@@ -18,12 +18,21 @@ package com.attachlink.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDate;
 
 /**
  * Data Transfer Object for creating or updating internship log entries.
- * Refined to match LogEntryService requirements for activities, challenges, and outcomes.
+ * Updated to support document uploads and file metadata.
  */
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class LogEntryRequest {
 
     @NotNull(message = "Log date is required")
@@ -40,50 +49,13 @@ public class LogEntryRequest {
     private String learningOutcomes;
 
     /**
-     * Default constructor for JSON deserialization.
+     * URL of the uploaded document (e.g., from S3 or local storage).
+     * Optional as not every log entry requires an attachment.
      */
-    public LogEntryRequest() {
-    }
+    private String attachmentUrl;
 
     /**
-     * Full constructor for easy instantiation in services or tests.
+     * The original filename of the uploaded document for display purposes.
      */
-    public LogEntryRequest(LocalDate logDate, String activities, String challenges, String learningOutcomes) {
-        this.logDate = logDate;
-        this.activities = activities;
-        this.challenges = challenges;
-        this.learningOutcomes = learningOutcomes;
-    }
-
-    public LocalDate getLogDate() {
-        return logDate;
-    }
-
-    public void setLogDate(LocalDate logDate) {
-        this.logDate = logDate;
-    }
-
-    public String getActivities() {
-        return activities;
-    }
-
-    public void setActivities(String activities) {
-        this.activities = activities;
-    }
-
-    public String getChallenges() {
-        return challenges;
-    }
-
-    public void setChallenges(String challenges) {
-        this.challenges = challenges;
-    }
-
-    public String getLearningOutcomes() {
-        return learningOutcomes;
-    }
-
-    public void setLearningOutcomes(String learningOutcomes) {
-        this.learningOutcomes = learningOutcomes;
-    }
+    private String attachmentOriginalName;
 }

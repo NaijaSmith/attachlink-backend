@@ -67,8 +67,6 @@ public class User {
     @JsonIgnore
     private User assignedEmployer;
 
-    // --- HELPER PROXY METHODS (Fixes Controller/Service Errors) ---
-
     /**
      * Proxies the registration number from the Student profile.
      */
