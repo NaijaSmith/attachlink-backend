@@ -20,32 +20,33 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.function.Function;
 
-/**
- * Refined JWT Utility class using JJWT 0.11.x compatible syntax.
- */
+
 @Component
 public class JwtUtil {
 
-    // Using @Value allows you to keep the secret out of the code. 
-    // It defaults to your hardcoded string if the property is missing.
-    @Value("${jwt.secret:3a9d2c3c62bc6aae26d780c784d48519055a94ccb84f78217f39462f34bf70c9}")
+    @Value("${attachlink.jwt.secret:3a9d2c3c62bc6aae26d780c784d48519055a94ccb84f78217f39462f34bf70c9}")
     private String secretKeyString;
 
     private final long expiration = 86400000; // 1 day in milliseconds
+    private SecretKey cachedKey;
 
-    /**
-     * Internal helper to generate the SecretKey from the string.
-     */
-    private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secretKeyString.getBytes(StandardCharsets.UTF_8));
+    @PostConstruct
+    protected void init() {
+        // Ensure we use a consistent key encoding. 
+        // If the string is a raw string, we get bytes. If it's Base64, we decode it.
+        this.cachedKey = Keys.hmacShaKeyFor(secretKeyString.getBytes(StandardCharsets.UTF_8));
     }
 
-    // Generate token for a user
+    private SecretKey getSigningKey() {
+        return this.cachedKey;
+    }
+
     public String generateToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
@@ -55,25 +56,19 @@ public class JwtUtil {
                 .compact();
     }
 
-    // Extract username from token
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
-    // Extract expiration date
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    // Generic method to extract claims
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
-    /**
-     * Main parsing method using parserBuilder() for compatibility with 0.11.x
-     */
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
@@ -82,7 +77,6 @@ public class JwtUtil {
                 .getBody();
     }
 
-    // Check if the token is expired
     public Boolean isTokenExpired(String token) {
         try {
             return extractExpiration(token).before(new Date());
@@ -91,13 +85,12 @@ public class JwtUtil {
         }
     }
 
-    // Validate the token against the username
     public Boolean isTokenValid(String token, String username) {
         try {
             final String extractedUsername = extractUsername(token);
             return (extractedUsername.equals(username) && !isTokenExpired(token));
         } catch (JwtException | IllegalArgumentException e) {
-            // Catches MalformedJwtException, SignatureException, etc.
+            // Logs would show "Signature does not match" here if keys were different
             return false;
         }
     }

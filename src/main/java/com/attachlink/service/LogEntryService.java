@@ -1,16 +1,14 @@
 /*Copyright 2026 Nicholas Kariuki Wambui
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
 http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License. */
+
 package com.attachlink.service;
 
 import com.attachlink.dto.LogEntryRequest;
@@ -46,10 +44,6 @@ public class LogEntryService {
         this.storageService = storageService;
     }
 
-    /**
-     * Creates a new log entry. 
-     * FIXED: Parameter order matched to Controller: (request, student, attachment)
-     */
     @Transactional
     public LogEntry createLog(LogEntryRequest request, User student, MultipartFile attachment) {
         if (logEntryRepository.existsByStudentAndLogDate(student, request.getLogDate())) {
@@ -65,6 +59,7 @@ public class LogEntryService {
         
         if (attachment != null && !attachment.isEmpty()) {
             validateFile(attachment);
+            // StorageService is now properly injected
             String filePath = storageService.store(attachment, "logs/" + student.getId());
             log.setAttachmentPath(filePath);
         }
@@ -84,9 +79,6 @@ public class LogEntryService {
         return savedLog;
     }
 
-    /**
-     * FIXED: Added missing updateLogStatus method required by LogEntryController
-     */
     @Transactional
     public void updateLogStatus(Long logId, LogStatus status) {
         LogEntry log = logEntryRepository.findById(logId)
