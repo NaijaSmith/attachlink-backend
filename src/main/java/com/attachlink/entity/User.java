@@ -1,16 +1,28 @@
 /*
- * Copyright (c) 2026 Nicholas Kariuki. All rights reserved.
+ * Copyright 2026 Nicholas Kariuki Wambui
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.attachlink.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-/**
- * Core User entity for AttachLink.
- * Handles authentication and acts as a root for Student/Supervisor profiles.
- */
 @Entity
 @Table(name = "users")
 @Getter 
@@ -47,63 +59,36 @@ public class User {
     @Builder.Default
     private boolean active = true;
 
-    // --- RELATIONSHIPS TO SPECIFIC TABLES ---
-
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Student studentProfile;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Supervisor supervisorProfile;
 
-    // --- SELF-REFERENCING LINKS (Hierarchy Management) ---
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supervisor_id")
+    @JoinColumn(name = "supervisor_id", nullable = true)
     @JsonIgnore 
-    private User assignedSupervisor;
+    private User supervisor;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employer_id")
+    @JoinColumn(name = "employer_id", nullable = true)
     @JsonIgnore
-    private User assignedEmployer;
+    private User employer;
 
-    /**
-     * Proxies the registration number from the Student profile.
-     */
+    // Helper method for Registration Number
     public String getRegistrationNumber() {
         return (studentProfile != null) ? studentProfile.getRegistrationNumber() : "N/A";
     }
 
-    /**
-     * Proxies the assigned supervisor.
-     */
-    public User getSupervisor() {
-        return assignedSupervisor;
-    }
-
-    /**
-     * Extracts the first name from the full name for greetings and file exports.
-     */
+    // Helper method for Greeting UI
     public String getFirstName() {
         if (fullName == null || fullName.trim().isEmpty()) return "User";
         return fullName.trim().split("\\s+")[0];
     }
+    
 
-    // --- ROLE CHECKS ---
-
-    public boolean isStudent() { 
-        return "STUDENT".equalsIgnoreCase(this.role); 
-    }
-    
-    public boolean isSupervisor() { 
-        return "SUPERVISOR".equalsIgnoreCase(this.role); 
-    }
-    
-    public boolean isEmployer() { 
-        return "EMPLOYER".equalsIgnoreCase(this.role); 
-    }
-    
-    public boolean isAdmin() { 
-        return "ADMIN".equalsIgnoreCase(this.role); 
+    public boolean hasValidInstitution() {
+        return institutionName != null && !institutionName.trim().isEmpty();
     }
 }

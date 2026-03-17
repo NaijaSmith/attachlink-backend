@@ -17,6 +17,7 @@ package com.attachlink.controller;
 
 import com.attachlink.dto.RegisterRequest;
 import com.attachlink.dto.UserMeResponse;
+import com.attachlink.dto.UserSummaryDTO;
 import com.attachlink.entity.User;
 import com.attachlink.repository.UserRepository;
 import com.attachlink.security.JwtUtil;
@@ -28,8 +29,10 @@ import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import java.util.List;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * REST controller for authentication-related endpoints.
@@ -106,6 +109,30 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "An unexpected error occurred during registration"));
         }
+    }
+
+     /**
+     * Fetch list of available Academic Supervisors for the Registration dropdown.
+     */
+    @GetMapping("/list-supervisors")
+    public ResponseEntity<List<UserSummaryDTO>> getSupervisors() {
+        List<UserSummaryDTO> supervisors = userRepository.findAll().stream()
+                .filter(u -> "SUPERVISOR".equalsIgnoreCase(u.getRole()))
+                .map(u -> new UserSummaryDTO(u.getId(), u.getFullName(), u.getInstitutionName()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(supervisors);
+    }
+
+    /**
+     * Fetch list of available Industry Employers for the Registration dropdown.
+     */
+    @GetMapping("/list-employers")
+    public ResponseEntity<List<UserSummaryDTO>> getEmployers() {
+        List<UserSummaryDTO> employers = userRepository.findAll().stream()
+                .filter(u -> "EMPLOYER".equalsIgnoreCase(u.getRole()))
+                .map(u -> new UserSummaryDTO(u.getId(), u.getFullName(), u.getInstitutionName()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(employers);
     }
 
     /**

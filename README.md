@@ -24,27 +24,9 @@ Supervisor Review Portal: A dedicated workflow for faculty supervisors to approv
 
 Employer Evaluations: On-site managers can monitor daily progress and provide 5-star performance ratings.
 
-Institutional Dashboard: Centralized access for coordinators to monitor overall progress and generate institutional reports.
+Institutional Dashboard: Centralized access for coordinators to monitor progress and generate institutional reports.
 
 Authenticated Submissions: Ensures all entries are verified, timestamped, and tamper-proof.
-
-🏗️ Project Scope
-
-✅ In Scope
-
-Android application for mobile student logging.
-
-Web-based dashboard for supervisors and institutional coordinators.
-
-Digital submission and archival of performance reports.
-
-Real-time tracking to eliminate delays inherent in handwritten reports.
-
-❌ Out of Scope
-
-Automated placement or matching with companies.
-
-Integration with non-academic professional networking platforms.
 
 🛠 Technical Stack
 
@@ -66,23 +48,19 @@ Spring Boot (Java), JPA/Hibernate
 
 Security
 
-JWT (JSON Web Tokens), Network Security Configuration (HTTPS)
+JWT (JSON Web Tokens), HTTPS
 
 Database
 
-MySQL
+MySQL / PostgreSQL
 
-Methodology
+DevOps
 
-Agile (Iterative Development)
-
-Development Environments
-
-Android Studio (Mobile) & VS Code/IntelliJ (Spring Boot Backend)
+Docker, Docker Compose
 
 📦 Setup & Installation
 
-1. Mobile App Setup
+1. Mobile App Setup (Android Studio / VS Code)
 
 Clone the repository:
 
@@ -91,15 +69,35 @@ git clone [https://github.com/your-username/attachlink-android.git](https://gith
 
 Add your google-services.json to the app/ folder.
 
-Update the BASE_URL in RetrofitClient.java to point to your hosted backend.
+Update the BASE_URL in RetrofitClient.java to point to your hosted backend URL.
 
-2. Backend Setup
+2. Backend Setup (Traditional)
 
-Ensure you have the AttachLink Spring Boot server running.
+Ensure you have Java 17 and MySQL installed.
 
-Configure your MySQL database credentials in application.properties.
+Configure your database credentials in src/main/resources/application.properties.
 
-Build and run using ./mvnw spring-boot:run.
+Build and run:
+
+./mvnw clean spring-boot:run
+
+
+3. Docker Deployment (Recommended for Cloud)
+
+To deploy the backend and database seamlessly using Docker:
+
+Build the Image:
+
+docker build -t attachlink-backend .
+
+
+Run with Docker Compose:
+Create a docker-compose.yml in your root directory and run:
+
+docker-compose up -d
+
+
+This will spin up both the Spring Boot API and a managed database instance automatically.
 
 🛡️ Risk Management & Integrity
 
@@ -107,18 +105,12 @@ Data Integrity: Regular backups are maintained via GitHub to prevent code and co
 
 Connectivity: The system is designed with offline work capability to allow students to log activities without a constant internet connection.
 
+Security: JWT implementation ensures that only authorized users can modify logbook entries.
+
 📄 License
 
-Copyright 2026 Nicholas Kariuki Wambui Institution: KCA University
+Copyright © 2026 Nicholas Kariuki Wambui
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at:
+Institution: KCA University
 
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Licensed under the Apache License, Version 2.0. See http://www.apache.org/licenses/LICENSE-2.0 for details.

@@ -1,18 +1,3 @@
-/*
- * Copyright 2026 Nicholas Kariuki Wambui
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.attachlink.service;
 
 import com.attachlink.dto.RegisterRequest;
@@ -29,7 +14,7 @@ import java.util.Set;
 
 /**
  * Service handling user authentication and registration logic.
- * Updated to support decoupled User, Student, and Supervisor entities.
+ * Fixed: Explicitly handling the persistence of profile entities to avoid 500 errors.
  */
 @Service
 public class AuthService {
@@ -45,21 +30,15 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    /**
-     * Helper method to retrieve the currently logged-in user from the Security Context.
-     * This fixes the "undefined method" error in VerificationService.
-     */
     public User getCurrentAuthenticatedUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Authenticated user not found in database"));
     }
 
-    /**
-     * Registers a new user and creates their respective profile (Student/Supervisor).
-     */
     @Transactional
     public User register(RegisterRequest request) {
+        // 1. Validate Role
         String role = (request.getRole() == null) 
                 ? null 
                 : request.getRole().trim().toUpperCase();
@@ -68,6 +47,7 @@ public class AuthService {
             throw new IllegalArgumentException("Invalid role. Allowed roles: " + ALLOWED_ROLES);
         }
 
+        // 2. Validate and Normalize Email
         if (isBlank(request.getEmail())) {
             throw new IllegalArgumentException("Email is required.");
         }
@@ -77,8 +57,10 @@ public class AuthService {
             throw new IllegalStateException("An account with this email already exists.");
         }
 
+        // 3. Structural Validation (Fat DTO check)
         validateRegistrationData(role, request);
 
+        // 4. Build User Entity
         User user = User.builder()
                 .email(normalizedEmail)
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -88,23 +70,31 @@ public class AuthService {
                 .active(true)
                 .build();
 
-        if ("STUDENT".equals(role)) {
-            createStudentProfile(user, request);
-        } else if ("SUPERVISOR".equals(role)) {
-            createSupervisorProfile(user, request);
-        }
-
+        // 5. Handle Foreign Key Assignments (Supervisor/Employer)
+        // If these IDs are invalid, findById will return empty and avoid 500 FK errors
         handleAssignments(user, request);
 
-        return userRepository.save(user);
+        // 6. Save User First to generate ID (Crucial for linked tables)
+        User savedUser = userRepository.save(user);
+
+        // 7. Create Profiles and link to savedUser
+        if ("STUDENT".equals(role)) {
+            createStudentProfile(savedUser, request);
+        } else if ("SUPERVISOR".equals(role)) {
+            createSupervisorProfile(savedUser, request);
+        }
+
+        // 8. Final Save (Updates user with profile links)
+        return userRepository.save(savedUser);
     }
 
     private void createStudentProfile(User user, RegisterRequest request) {
         Student student = new Student();
-        student.setUser(user);
+        student.setUser(user); // Link to the user with the generated ID
         student.setRegistrationNumber(request.getRegistrationNumber().trim());
         student.setCourse(request.getCourse().trim());
         user.setStudentProfile(student);
+        // Note: Ensure User entity has @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     }
 
     private void createSupervisorProfile(User user, RegisterRequest request) {
@@ -113,16 +103,25 @@ public class AuthService {
         user.setSupervisorProfile(supervisor);
     }
 
-    private void handleAssignments(User user, RegisterRequest request) {
-        if (request.getSupervisorId() != null) {
-            userRepository.findById(request.getSupervisorId())
-                .ifPresent(user::setAssignedSupervisor);
-        }
-        if (request.getEmployerId() != null) {
-            userRepository.findById(request.getEmployerId())
-                .ifPresent(user::setAssignedEmployer);
-        }
+private void handleAssignments(User user, RegisterRequest request) {
+    // Handle Supervisor Assignment
+    if (request.getSupervisorId() != null && request.getSupervisorId() > 0) {
+        userRepository.findById(request.getSupervisorId())
+            .ifPresent(supervisor -> {
+                // Matches the renamed field: private User supervisor;
+                user.setSupervisor(supervisor);
+            });
     }
+
+    // Handle Employer Assignment
+    if (request.getEmployerId() != null && request.getEmployerId() > 0) {
+        userRepository.findById(request.getEmployerId())
+            .ifPresent(employer -> {
+                // Matches the renamed field: private User employer;
+                user.setEmployer(employer);
+            });
+    }
+}
 
     private void validateRegistrationData(String role, RegisterRequest request) {
         if (isBlank(request.getFullName())) {

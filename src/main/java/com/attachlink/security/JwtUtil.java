@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.attachlink.security;
 
 import io.jsonwebtoken.*;
@@ -26,24 +27,32 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.function.Function;
 
-
 @Component
 public class JwtUtil {
 
+    // Matches the property in application.properties
     @Value("${attachlink.jwt.secret:3a9d2c3c62bc6aae26d780c784d48519055a94ccb84f78217f39462f34bf70c9}")
     private String secretKeyString;
 
-    private final long expiration = 86400000; // 1 day in milliseconds
+    private final long expiration = 86400000; // 1 day
     private SecretKey cachedKey;
 
     @PostConstruct
     protected void init() {
-        // Ensure we use a consistent key encoding. 
-        // If the string is a raw string, we get bytes. If it's Base64, we decode it.
-        this.cachedKey = Keys.hmacShaKeyFor(secretKeyString.getBytes(StandardCharsets.UTF_8));
+        if (secretKeyString == null || secretKeyString.trim().isEmpty()) {
+            throw new IllegalStateException("JWT Secret Key string is missing!");
+        }
+        byte[] keyBytes = secretKeyString.getBytes(StandardCharsets.UTF_8);
+        this.cachedKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
+    /**
+     * Defensive getter to ensure the key is never null.
+     */
     private SecretKey getSigningKey() {
+        if (this.cachedKey == null) {
+            init(); // Manual fallback if PostConstruct wasn't called yet
+        }
         return this.cachedKey;
     }
 
@@ -52,7 +61,7 @@ public class JwtUtil {
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // Uses the safe getter
                 .compact();
     }
 
@@ -90,7 +99,6 @@ public class JwtUtil {
             final String extractedUsername = extractUsername(token);
             return (extractedUsername.equals(username) && !isTokenExpired(token));
         } catch (JwtException | IllegalArgumentException e) {
-            // Logs would show "Signature does not match" here if keys were different
             return false;
         }
     }
