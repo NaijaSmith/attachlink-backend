@@ -3,7 +3,8 @@ FROM eclipse-temurin:21-jdk-jammy AS build
 WORKDIR /app
 
 # Copy maven wrapper and pom.xml for dependency caching
-COPY .mvn/ .mvn
+COPY pom.xml ./
+COPY .mvn/ .mvn/
 COPY mvnw mvnw.cmd pom.xml ./
 RUN ./mvnw dependency:go-offline -B
 
