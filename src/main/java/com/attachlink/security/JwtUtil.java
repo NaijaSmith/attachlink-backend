@@ -7,7 +7,7 @@
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
+ * Unless required by law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
@@ -30,8 +30,7 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    // Matches the property in application.properties
-    @Value("${attachlink.jwt.secret:3a9d2c3c62bc6aae26d780c784d48519055a94ccb84f78217f39462f34bf70c9}")
+    @Value("${attachlink.jwt.secret}")
     private String secretKeyString;
 
     private final long expiration = 86400000; // 1 day
@@ -40,7 +39,7 @@ public class JwtUtil {
     @PostConstruct
     protected void init() {
         if (secretKeyString == null || secretKeyString.trim().isEmpty()) {
-            throw new IllegalStateException("JWT Secret Key string is missing!");
+            throw new IllegalStateException("JWT Secret Key string is missing! Set ATTACHLINK_JWT_SECRET in .env");
         }
         byte[] keyBytes = secretKeyString.getBytes(StandardCharsets.UTF_8);
         this.cachedKey = Keys.hmacShaKeyFor(keyBytes);
@@ -97,7 +96,7 @@ public class JwtUtil {
     public Boolean isTokenValid(String token, String username) {
         try {
             final String extractedUsername = extractUsername(token);
-            return (extractedUsername.equals(username) && !isTokenExpired(token));
+            return (extractedUsername.equals(username) &amp;&amp; !isTokenExpired(token));
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }

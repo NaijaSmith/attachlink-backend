@@ -31,3 +31,13 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Secrets & Environment
+.env
+.env.*
+!.env.example
+src/main/resources/application.properties
+src/main/resources/firebase-service-account.json
+**/firebase-service-account*.json
+upload-dir/*
+.DS_Store

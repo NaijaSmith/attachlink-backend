@@ -1,0 +1,27 @@
+# Ignore secrets and large/unneeded files
+.env*
+!.env.example
+src/main/resources/application.properties
+src/main/resources/firebase-service-account*
+src/main/resources/firebase-service-account.json
+
+# Build outputs
+target/
+**/target/
+*.jar
+*.war
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Logs and runtime data
+*.log
+upload-dir/
+.venv/
