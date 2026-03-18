@@ -50,25 +50,25 @@ public class SupervisorService {
     }
 
     /**
-     * Retrieves dashboard statistics for a supervisor.
-     * Fixed: Matches call in SupervisorController.getDashboardStats()
+     * Retrieves dashboard statistics for a supervisor including student count and pending tasks.
      */
     public Map<String, Object> getDashboardStats(String email) {
         User supervisor = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Supervisor not found"));
+                .orElseThrow(() -> new RuntimeException("Supervisor not found with email: " + email));
 
-        long totalStudents = userRepository.countBySupervisor(supervisor);
+        long totalStudents = userRepository.countBySupervisorAndActiveTrue(supervisor);
         long pendingLogs = logEntryRepository.countByStudent_SupervisorAndStatus(supervisor, LogStatus.SUBMITTED);
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalStudents", totalStudents);
         stats.put("pendingLogsCount", pendingLogs);
+        stats.put("timestamp", LocalDateTime.now());
+        
         return stats;
     }
 
     /**
-     * Retrieves a list of students assigned to this supervisor.
-     * Fixed: Matches call in SupervisorController.getAssignedStudents()
+     * Retrieves a list of students specifically assigned to this supervisor.
      */
     public List<User> getAssignedStudents(String email) {
         User supervisor = userRepository.findByEmail(email)
@@ -78,7 +78,6 @@ public class SupervisorService {
 
     /**
      * Retrieves all logs awaiting review for students assigned to this supervisor.
-     * Fixed: Matches call in SupervisorController.viewSubmittedLogs()
      */
     public List<LogEntry> getPendingLogsForSupervisor(String email) {
         User supervisor = userRepository.findByEmail(email)
@@ -88,7 +87,8 @@ public class SupervisorService {
     }
 
     /**
-     * Review a specific log entry and generate an Evaluation record.
+     * Review a specific log entry, updates status, and creates an Evaluation record.
+     * Uses @Transactional to ensure both LogEntry update and Evaluation creation succeed together.
      */
     @Transactional
     public LogEntry reviewLog(Long logId, LogReviewRequest request, String supervisorEmail) {
@@ -96,37 +96,42 @@ public class SupervisorService {
                 .orElseThrow(() -> new RuntimeException("Supervisor not found"));
 
         LogEntry log = logEntryRepository.findById(logId)
-                .orElseThrow(() -> new RuntimeException("Log entry not found"));
+                .orElseThrow(() -> new RuntimeException("Log entry not found with ID: " + logId));
 
-        // SECURITY CHECK: Verify supervisor authorization
+        // SECURITY CHECK: Ensure this supervisor is actually assigned to the student
         User student = log.getStudent();
         if (student.getSupervisor() == null || !student.getSupervisor().getId().equals(supervisor.getId())) {
-            throw new RuntimeException("Security Violation: Unauthorized access to student data.");
+            throw new SecurityException("Unauthorized: You are not assigned to supervise this student.");
         }
 
-        // Business Rule: Only review logs in SUBMITTED state
+        // VALIDATION: Ensure the log hasn't been processed already
         if (!LogStatus.SUBMITTED.equals(log.getStatus())) {
-            throw new RuntimeException("Log entry is not in a pending state.");
+            throw new IllegalStateException("Log entry is currently in " + log.getStatus() + " status and cannot be reviewed.");
         }
 
-        // 1. Update Log Status
-        log.setStatus(request.getStatus());
+        // 1. Update Log Status and Metadata
+        log.setStatus(request.getStatus()); // Expecting APPROVED or REJECTED
         log.setReviewedAt(LocalDateTime.now());
         LogEntry savedLog = logEntryRepository.save(log);
 
-        // 2. Create Evaluation Record
-        Evaluation evaluation = new Evaluation();
-        evaluation.setLogEntry(savedLog);
-        evaluation.setSupervisor(supervisor); // Assumes Evaluation.java was updated to User type
-        evaluation.setRemarks(request.getSupervisorComment());
-        evaluation.setScore(request.getScore()); // Ensure LogReviewRequest has a score field
+        // 2. Create and Persist Evaluation/Feedback
+        Evaluation evaluation = Evaluation.builder()
+                .logEntry(savedLog)
+                .supervisor(supervisor)
+                .remarks(request.getSupervisorComment())
+                .score(request.getScore())
+                .submittedAt(LocalDateTime.now())
+                .build();
+        
         evaluationRepository.save(evaluation);
 
-        // 3. Notify Student
-        notificationService.notify(
-                student,
-                "Log Update: Your entry for " + log.getLogDate() + " has been " + request.getStatus()
-        );
+        // 3. Trigger Notification to Student
+        String message = String.format("Log Update: Your entry for %s has been %s by %s.", 
+                log.getLogDate(), 
+                request.getStatus().toString().toLowerCase(),
+                supervisor.getFullName());
+                
+        notificationService.notify(student, message);
 
         return savedLog;
     }

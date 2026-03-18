@@ -42,12 +42,17 @@ public class RegisterRequest {
     @Size(min = 6, message = "Password must be at least 6 characters long")
     private String password;
 
+    /**
+     * Role can be 'STUDENT', 'SUPERVISOR', or 'EMPLOYER'
+     */
     @NotBlank(message = "User role is required")
     private String role;
 
     @NotBlank(message = "Full name is required")
+    @JsonProperty("full_name") // Matching snake_case often used in API requests
     private String fullName;
 
+    @JsonProperty("registration_number")
     private String registrationNumber;
 
     @JsonProperty("institution")
@@ -58,10 +63,23 @@ public class RegisterRequest {
     /**
      * ID of the selected Academic Supervisor (Mandatory for Student role)
      */
+    @JsonProperty("supervisor_id")
     private Long supervisorId;
 
     /**
      * ID of the selected Industry Employer (Mandatory for Student role)
      */
+    @JsonProperty("employer_id")
     private Long employerId;
+
+    /**
+     * Helper method to validate student-specific requirements.
+     * Can be called manually in the AuthService.
+     */
+    public boolean isValidForStudent() {
+        if ("STUDENT".equalsIgnoreCase(this.role)) {
+            return supervisorId != null && employerId != null;
+        }
+        return true;
+    }
 }

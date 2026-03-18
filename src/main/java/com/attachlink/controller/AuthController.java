@@ -29,8 +29,8 @@ import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import java.util.List;
 
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -62,7 +62,6 @@ public class AuthController {
 
     /**
      * LOGIN
-     * Authenticates credentials and returns a JWT.
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody RegisterRequest loginData) {
@@ -95,7 +94,6 @@ public class AuthController {
 
     /**
      * REGISTER
-     * Creates a new user profile using the refined AuthService logic.
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
@@ -111,14 +109,16 @@ public class AuthController {
         }
     }
 
-     /**
+    /**
      * Fetch list of available Academic Supervisors for the Registration dropdown.
      */
     @GetMapping("/list-supervisors")
     public ResponseEntity<List<UserSummaryDTO>> getSupervisors() {
+        // Optimization: In the future, use userRepository.findByRole("SUPERVISOR") 
+        // to avoid loading the entire user database into memory.
         List<UserSummaryDTO> supervisors = userRepository.findAll().stream()
                 .filter(u -> "SUPERVISOR".equalsIgnoreCase(u.getRole()))
-                .map(u -> new UserSummaryDTO(u.getId(), u.getFullName(), u.getInstitutionName()))
+                .map(this::convertToSummaryDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(supervisors);
     }
@@ -130,14 +130,26 @@ public class AuthController {
     public ResponseEntity<List<UserSummaryDTO>> getEmployers() {
         List<UserSummaryDTO> employers = userRepository.findAll().stream()
                 .filter(u -> "EMPLOYER".equalsIgnoreCase(u.getRole()))
-                .map(u -> new UserSummaryDTO(u.getId(), u.getFullName(), u.getInstitutionName()))
+                .map(this::convertToSummaryDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(employers);
     }
 
     /**
+     * Helper to map User Entity to UserSummaryDTO using the Builder pattern.
+     */
+    private UserSummaryDTO convertToSummaryDTO(User user) {
+        return UserSummaryDTO.builder()
+                .id(user.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .institutionName(user.getInstitutionName())
+                .registrationNumber(user.getRegistrationNumber())
+                .build();
+    }
+
+    /**
      * FORGOT PASSWORD
-     * Initiates the password reset process by sending an OTP via email.
      */
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestParam String email) {
@@ -154,7 +166,6 @@ public class AuthController {
 
     /**
      * RESET PASSWORD
-     * Verifies the OTP and updates the user's password.
      */
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestParam String email, 
@@ -183,16 +194,11 @@ public class AuthController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User profile not found"));
 
-        String regNumber = null;
-        if (user.getStudentProfile() != null) {
-            regNumber = user.getStudentProfile().getRegistrationNumber();
-        }
-
         UserMeResponse res = new UserMeResponse(
                 user.getEmail(),
                 user.getRole(),
                 user.getFullName(),
-                regNumber,
+                user.getRegistrationNumber(),
                 user.getInstitutionName()
         );
 

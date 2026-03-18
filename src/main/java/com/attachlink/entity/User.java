@@ -16,12 +16,9 @@
 package com.attachlink.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
 @Table(name = "users")
@@ -55,16 +52,17 @@ public class User {
     @Column(name = "fcm_token")
     private String fcmToken;
 
+    @Column(name = "registration_number")
+    private String registrationNumber;
+
+    @Column(name = "course")
+    private String course;
+
     @Column(nullable = false)
     @Builder.Default
     private boolean active = true;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private Student studentProfile;
-
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private Supervisor supervisorProfile;
-
+    // --- Self-Referencing Relationships ---
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "supervisor_id", nullable = true)
@@ -76,19 +74,39 @@ public class User {
     @JsonIgnore
     private User employer;
 
-    // Helper method for Registration Number
-    public String getRegistrationNumber() {
-        return (studentProfile != null) ? studentProfile.getRegistrationNumber() : "N/A";
+    // --- Helper Methods ---
+
+    /**
+     * Safely retrieves registration number or default value.
+     */
+    public String getRegistrationNumberDisplay() {
+        return registrationNumber != null ? registrationNumber : "N/A";
     }
 
-    // Helper method for Greeting UI
+    /**
+     * Returns the first part of the full name for UI greetings.
+     */
+    @JsonProperty("firstName")
     public String getFirstName() {
         if (fullName == null || fullName.trim().isEmpty()) return "User";
         return fullName.trim().split("\\s+")[0];
     }
-    
 
+    /**
+     * Checks if the user has an associated institution.
+     */
     public boolean hasValidInstitution() {
         return institutionName != null && !institutionName.trim().isEmpty();
+    }
+
+    // Expose names for JSON without circular references
+    @JsonProperty("supervisorName")
+    public String getSupervisorName() {
+        return supervisor != null ? supervisor.getFullName() : null;
+    }
+
+    @JsonProperty("employerName")
+    public String getEmployerName() {
+        return employer != null ? employer.getFullName() : null;
     }
 }
