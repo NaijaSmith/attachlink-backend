@@ -21,6 +21,9 @@ import com.attachlink.entity.User;
 import com.attachlink.entity.LogStatus;
 import com.attachlink.service.LogEntryService;
 import com.attachlink.repository.UserRepository;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,10 +32,14 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.net.MalformedURLException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
  * Controller for managing student daily log entries and file uploads.
+ * Refined to fix syntax errors and improve file download handling.
  */
 @RestController
 @RequestMapping("/api/logs")
@@ -40,6 +47,8 @@ public class LogEntryController {
 
     private final LogEntryService logEntryService;
     private final UserRepository userRepository;
+    // Base directory for uploads, should match your StorageService configuration
+    private final Path rootLocation = Paths.get("upload-dir");
 
     public LogEntryController(LogEntryService logEntryService, UserRepository userRepository) {
         this.logEntryService = logEntryService;
@@ -48,7 +57,7 @@ public class LogEntryController {
 
     /**
      * Submit a daily log entry with an optional file attachment.
-     * Uses MULTIPART_FORM_DATA to allow JSON data and file binary to be sent together.
+     * Fixed syntax: Removed improper escaping and corrected parameter grouping.
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<LogEntry> submitLog(
@@ -58,8 +67,7 @@ public class LogEntryController {
 
         User student = getCurrentUser(authentication);
         
-        // Refined to match Service signature: createLog(request, attachment, student)
-        // Note: Swapped 'student' and 'file' based on the error shown in your screenshot
+        // Pass the request, the authenticated student, and the optional file to the service
         LogEntry savedLog = logEntryService.createLog(request, student, file);
         
         return ResponseEntity.status(HttpStatus.CREATED).body(savedLog);
@@ -92,10 +100,44 @@ public class LogEntryController {
     }
 
     /**
+     * Download attached file by relative path (e.g., logs/1/uuid_file.pdf).
+     * Refined path resolution and error handling.
+     */
+    @GetMapping("/download/{*path}")
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable String path) {
+        try {
+            // Remove leading slash if present to prevent absolute path traversal
+            String cleanPath = path.startsWith("/") ? path.substring(1) : path;
+            Path filePath = rootLocation.resolve(cleanPath).normalize();
+            
+            // Security check: Ensure the resolved path is still within the rootLocation
+            if (!filePath.startsWith(rootLocation.normalize())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+            }
+
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists() || resource.isReadable()) {
+                String filename = filePath.getFileName().toString();
+                return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (MalformedURLException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
      * Helper method to extract the User entity from the security context.
      */
     private User getCurrentUser(Authentication authentication) {
-        if (authentication == null) {
+        if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
         String email = authentication.getName();

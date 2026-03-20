@@ -48,7 +48,7 @@ class FileSystemStorageService implements StorageService {
                     .normalize().toAbsolutePath();
 
             file.transferTo(destinationFile);
-            return destinationFile.toString();
+            return folder + "/" + filename;
         } catch (IOException e) {
             throw new RuntimeException("Failed to store file.", e);
         }

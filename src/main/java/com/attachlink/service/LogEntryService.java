@@ -34,7 +34,7 @@ public class LogEntryService {
     private final NotificationService notificationService;
     private final StorageService storageService;
 
-    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("pdf", "docx", "doc");
+    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("pdf", "docx");
 
     public LogEntryService(LogEntryRepository logEntryRepository, 
                            NotificationService notificationService,
@@ -62,6 +62,7 @@ public class LogEntryService {
             // StorageService is now properly injected
             String filePath = storageService.store(attachment, "logs/" + student.getId());
             log.setAttachmentPath(filePath);
+            log.setAttachmentOriginalName(attachment.getOriginalFilename());
         }
 
         log.setStatus(LogStatus.SUBMITTED);

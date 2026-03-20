@@ -74,7 +74,6 @@ public class User {
     @JsonIgnore
     private User employer;
 
-    // --- Helper Methods ---
 
     /**
      * Safely retrieves registration number or default value.
