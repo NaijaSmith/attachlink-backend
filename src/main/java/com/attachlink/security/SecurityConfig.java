@@ -43,7 +43,9 @@ public class SecurityConfig {
                     "/api/auth/login", 
                     "/api/auth/register", 
                     "/api/auth/forgot-password", 
-                    "/api/auth/reset-password"
+                    "/api/auth/reset-password",
+                    "/api/auth/list-supervisors",
+                    "/api/auth/list-employers"
                 ).permitAll()
 
                 // Role-based access control
