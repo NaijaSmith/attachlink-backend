@@ -200,7 +200,8 @@ public class AuthController {
                 user.getRole(),
                 user.getFullName(),
                 user.getRegistrationNumber(),
-                user.getInstitutionName()
+                user.getInstitutionName(),
+                user.getCourse()
         );
 
         return ResponseEntity.ok(res);
