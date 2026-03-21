@@ -84,13 +84,15 @@ public class SupervisorService {
                 .orElseThrow(() -> new RuntimeException("Log entry not found with ID: " + logId));
 
         User student = log.getStudent();
-        if (student.getSupervisor() == null || 
-            student.getSupervisor().getId().longValue() != supervisor.getId().longValue()) {
+        User assignedSupervisor = student.getSupervisor();
+        if (assignedSupervisor == null || 
+            assignedSupervisor.getId().longValue() != supervisor.getId().longValue()) {
             
-            System.err.println("Mismatch: Student Supervisor ID: " + (student.getSupervisor() != null ? student.getSupervisor().getId() : "NULL") + 
-                               " vs Logged-in ID: " + supervisor.getId());
-                               
-            throw new SecurityException("You do not have permission to review this log.");
+            System.out.println("MISMATCH: Log is for Supervisor ID [" + 
+                (assignedSupervisor != null ? assignedSupervisor.getId() : "NULL") + 
+                "] but you are logged in as ID [" + supervisor.getId() + "]");
+                
+            throw new SecurityException("Permission denied.");
         }
 
         if (!LogStatus.SUBMITTED.equals(log.getStatus())) {
