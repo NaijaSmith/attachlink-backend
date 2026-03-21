@@ -46,6 +46,10 @@ public class EmployerFeedbackRequest {
     @Max(value = 5, message = "Communication rating cannot exceed 5")
     private int communication;
 
+    @Min(value = 1, message = "Teamwork rating must be at least 1")
+    @Max(value = 5, message = "Teamwork rating cannot exceed 5")
+    private int teamworkRating;
+
     @NotBlank(message = "Qualitative feedback comment is required")
     @Size(min = 10, max = 1000, message = "Comment must be between 10 and 1000 characters")
     private String comment;
@@ -103,6 +107,10 @@ public class EmployerFeedbackRequest {
     }
 
     public int getTeamworkRating() {
-        throw new UnsupportedOperationException("Unimplemented method 'getTeamworkRating'");
+        return teamworkRating;
+    }
+
+    public void setTeamworkRating(int teamworkRating) {
+        this.teamworkRating = teamworkRating;
     }
 }
