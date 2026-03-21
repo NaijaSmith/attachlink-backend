@@ -15,6 +15,7 @@
  */
 package com.attachlink.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -26,7 +27,8 @@ import lombok.NoArgsConstructor;
 
 /**
  * Data Transfer Object for user registration.
- * Handles mapping between JSON from the Android client and the Spring Boot backend.
+ * Optimized to support both snake_case (Android) and camelCase (Web/Java) 
+ * using @JsonAlias to prevent validation "Required" errors.
  */
 @Data
 @Builder
@@ -49,13 +51,16 @@ public class RegisterRequest {
     private String role;
 
     @NotBlank(message = "Full name is required")
-    @JsonProperty("full_name") // Matching snake_case often used in API requests
+    @JsonProperty("full_name")
+    @JsonAlias("fullName") 
     private String fullName;
 
     @JsonProperty("registration_number")
+    @JsonAlias("registrationNumber")
     private String registrationNumber;
 
     @JsonProperty("institution")
+    @JsonAlias("institutionName")
     private String institutionName;
 
     private String course;
@@ -64,17 +69,18 @@ public class RegisterRequest {
      * ID of the selected Academic Supervisor (Mandatory for Student role)
      */
     @JsonProperty("supervisor_id")
+    @JsonAlias("supervisorId")
     private Long supervisorId;
 
     /**
      * ID of the selected Industry Employer (Mandatory for Student role)
      */
     @JsonProperty("employer_id")
+    @JsonAlias("employerId")
     private Long employerId;
 
     /**
      * Helper method to validate student-specific requirements.
-     * Can be called manually in the AuthService.
      */
     public boolean isValidForStudent() {
         if ("STUDENT".equalsIgnoreCase(this.role)) {
