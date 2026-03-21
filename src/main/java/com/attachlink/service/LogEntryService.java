@@ -33,6 +33,7 @@ import java.util.Objects;
 
 /**
  * Service handling the lifecycle and business logic of Log Entries.
+ * Supports initial submission, supervisor review, and student resubmission of rejected logs.
  */
 @Service
 public class LogEntryService {
@@ -53,8 +54,7 @@ public class LogEntryService {
     }
 
     /**
-     * Fixes the "Field 'description' / 'submitted_at' doesn't have a default value" error
-     * by ensuring all required fields are populated before saving.
+     * Creates a new log entry.
      */
     @Transactional
     public LogEntry createLog(LogEntryRequest request, User student, MultipartFile attachment) {
@@ -65,29 +65,21 @@ public class LogEntryService {
         LogEntry log = new LogEntry();
         log.setStudent(student);
         log.setLogDate(request.getLogDate());
-        
-        // Ensure description/activities is never null to satisfy DB constraints
         log.setActivities(request.getActivities() != null ? request.getActivities() : "No activities listed");
         log.setChallenges(request.getChallenges());
         log.setLearningOutcomes(request.getLearningOutcomes());
         
-        if (attachment != null && !attachment.isEmpty()) {
-            validateFile(attachment);
-            String subDirectory = "logs/" + student.getId();
-            String filePath = storageService.store(attachment, subDirectory);
-            log.setAttachmentPath(filePath);
-            log.setAttachmentOriginalName(attachment.getOriginalFilename());
-        }
+        handleFileAttachment(log, student, attachment);
 
         log.setStatus(LogStatus.SUBMITTED);
-        log.setSubmittedAt(LocalDateTime.now()); // Fixed: Critical for the error in image_fd508e.png
+        log.setSubmittedAt(LocalDateTime.now());
 
         LogEntry savedLog = logEntryRepository.save(log);
 
         if (student.getSupervisor() != null) {
             notificationService.notify(
                 student.getSupervisor(),
-                String.format("New Log Entry: %s submitted a log for %s", 
+                String.format("New Log: %s submitted a log for %s", 
                     student.getFullName(), log.getLogDate())
             );
         }
@@ -96,29 +88,65 @@ public class LogEntryService {
     }
 
     /**
-     * Added this method to resolve the IDE error seen in image_fe57cb.jpg.
-     * This matches the controller's expected signature.
+     * Handles student resubmission of a REJECTED log.
+     * Updates text fields, optionally replaces the file, and resets status to SUBMITTED.
      */
     @Transactional
-    public void updateLogStatus(Long logId, LogStatus status) {
+    public LogEntry resubmitLog(Long logId, LogEntryRequest request, User student, MultipartFile attachment) {
         LogEntry log = logEntryRepository.findById(logId)
                 .orElseThrow(() -> new IllegalArgumentException("Log entry not found with ID: " + logId));
-        
-        log.setStatus(status);
-        log.setReviewedAt(LocalDateTime.now());
-        
-        logEntryRepository.save(log);
 
-        notificationService.notify(
-            log.getStudent(),
-            String.format("Log Status Updated: Your log for %s is now %s", 
-                log.getLogDate(), status.name().toLowerCase())
-        );
+        // 1. Security Check: Ownership
+        if (!log.getStudent().getId().equals(student.getId())) {
+            throw new SecurityException("Unauthorized: You can only edit your own logs.");
+        }
+
+        // 2. State Check: Must be REJECTED
+        if (!LogStatus.REJECTED.equals(log.getStatus())) {
+            throw new IllegalStateException("Only rejected logs can be edited and resubmitted.");
+        }
+
+        // 3. Update Text Content
+        log.setActivities(request.getActivities());
+        log.setChallenges(request.getChallenges());
+        log.setLearningOutcomes(request.getLearningOutcomes());
+        
+        // 4. Update File (If a new one is provided)
+        if (attachment != null && !attachment.isEmpty()) {
+            handleFileAttachment(log, student, attachment);
+        }
+
+        // 5. Reset Status & Track Update Time
+        log.setStatus(LogStatus.SUBMITTED);
+        log.setUpdatedAt(LocalDateTime.now());
+
+        LogEntry updatedLog = logEntryRepository.save(log);
+
+        // 6. Notify Supervisor of the Correction
+        if (student.getSupervisor() != null) {
+            notificationService.notify(
+                student.getSupervisor(),
+                String.format("Log Updated: %s resubmitted the log for %s", 
+                    student.getFullName(), log.getLogDate())
+            );
+        }
+
+        return updatedLog;
     }
 
     /**
-     * Existing review method for more detailed feedback.
+     * Internal helper to process and store file attachments.
      */
+    private void handleFileAttachment(LogEntry log, User student, MultipartFile attachment) {
+        if (attachment != null && !attachment.isEmpty()) {
+            validateFile(attachment);
+            String subDirectory = "logs/" + student.getId();
+            String filePath = storageService.store(attachment, subDirectory);
+            log.setAttachmentPath(filePath);
+            log.setAttachmentOriginalName(attachment.getOriginalFilename());
+        }
+    }
+
     @Transactional
     public LogEntry reviewLog(Long logId, LogStatus status, String supervisorComment) {
         LogEntry log = logEntryRepository.findById(logId)
@@ -139,6 +167,11 @@ public class LogEntryService {
         return updatedLog;
     }
 
+    @Transactional(readOnly = true)
+    public List<LogEntry> getStudentLogs(User student) {
+        return logEntryRepository.findByStudentOrderByLogDateDesc(student);
+    }
+
     private void validateFile(MultipartFile file) {
         String filename = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
         if (filename.contains("..")) {
@@ -153,8 +186,12 @@ public class LogEntryService {
         }
     }
 
-    @Transactional(readOnly = true)
-    public List<LogEntry> getStudentLogs(User student) {
-        return logEntryRepository.findByStudentOrderByLogDateDesc(student);
+    @Transactional
+    public void updateLogStatus(Long logId, LogStatus status) {
+        LogEntry log = logEntryRepository.findById(logId)
+                .orElseThrow(() -> new IllegalArgumentException("Log entry not found with ID: " + logId));
+        log.setStatus(status);
+        log.setReviewedAt(LocalDateTime.now());
+        logEntryRepository.save(log);
     }
 }

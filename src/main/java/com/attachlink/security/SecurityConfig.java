@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -25,8 +26,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Centralized Security Configuration for AttachLink.
+ * Configured for Stateless JWT Auth with explicit Role-Based Access Control.
+ */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity // Allows using @PreAuthorize on Service/Controller methods
 public class SecurityConfig {
 
     @Bean
@@ -38,7 +44,7 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints - Added password reset endpoints here
+                // 1. Public Endpoints (No Token Required)
                 .requestMatchers(
                     "/api/auth/login", 
                     "/api/auth/register", 
@@ -48,32 +54,41 @@ public class SecurityConfig {
                     "/api/auth/list-employers"
                 ).permitAll()
 
-                // Role-based access control
-                .requestMatchers("/api/supervisor/**").hasRole("SUPERVISOR")
-                .requestMatchers("/api/employer/**").hasRole("EMPLOYER")
-                .requestMatchers("/api/logs/**").hasRole("STUDENT")
-                .requestMatchers("/api/email/**").authenticated()
+                // 2. Supervisor-Specific Endpoints
+                .requestMatchers("/api/supervisor/**").hasAnyAuthority("ROLE_SUPERVISOR", "SUPERVISOR")
 
-                // Authenticated endpoints
+                // 3. Employer-Specific Endpoints
+                .requestMatchers("/api/employer/**").hasAnyAuthority("ROLE_EMPLOYER", "EMPLOYER")
+
+                // 4. Student-Specific Endpoints (Including Log Submissions/Resubmissions)
+                .requestMatchers("/api/logs/**").hasAnyAuthority("ROLE_STUDENT", "STUDENT")
+
+                // 5. Shared Authenticated Resources
                 .requestMatchers(
                     "/api/auth/me",
-                    "/api/test/**",
                     "/api/notifications/**",
                     "/api/analytics/**",
                     "/api/reports/**",
-                    "/api/fcm/**"
+                    "/api/fcm/**",
+                    "/api/email/**"
                 ).authenticated()
 
+                // 6. Final Catch-all
                 .anyRequest().authenticated()
             )
+            // Inject our JWT Filter before the standard UsernamePassword filter
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
+    /**
+     * Configures Cross-Origin Resource Sharing (CORS) for Mobile and Web clients.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
+        // For production 2026, replace "*" with your specific domain if applicable
         config.setAllowedOrigins(List.of("*")); 
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));

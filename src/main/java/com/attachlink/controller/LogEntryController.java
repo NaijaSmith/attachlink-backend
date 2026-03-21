@@ -38,8 +38,8 @@ import java.nio.file.Paths;
 import java.util.List;
 
 /**
- * Controller for managing student daily log entries and file uploads.
- * Refined to fix syntax errors and improve file download handling.
+ * Controller for managing student daily log entries and resubmissions.
+ * Supports multipart uploads for initial submission and rejected log correction.
  */
 @RestController
 @RequestMapping("/api/logs")
@@ -47,7 +47,8 @@ public class LogEntryController {
 
     private final LogEntryService logEntryService;
     private final UserRepository userRepository;
-    // Base directory for uploads, should match your StorageService configuration
+    
+    // Base directory for uploads
     private final Path rootLocation = Paths.get("upload-dir");
 
     public LogEntryController(LogEntryService logEntryService, UserRepository userRepository) {
@@ -56,8 +57,7 @@ public class LogEntryController {
     }
 
     /**
-     * Submit a daily log entry with an optional file attachment.
-     * Fixed syntax: Removed improper escaping and corrected parameter grouping.
+     * Submit a brand new daily log entry.
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<LogEntry> submitLog(
@@ -66,15 +66,31 @@ public class LogEntryController {
             Authentication authentication) {
 
         User student = getCurrentUser(authentication);
-        
-        // Pass the request, the authenticated student, and the optional file to the service
         LogEntry savedLog = logEntryService.createLog(request, student, file);
-        
         return ResponseEntity.status(HttpStatus.CREATED).body(savedLog);
     }
 
     /**
-     * Retrieves all log entries belonging to the currently authenticated student.
+     * RESUBMIT A REJECTED LOG.
+     * Allows students to edit content and set status back to SUBMITTED after a rejection.
+     */
+    @PutMapping(value = "/{logId}/resubmit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<LogEntry> resubmitLog(
+            @PathVariable Long logId,
+            @RequestPart("data") LogEntryRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            Authentication authentication) {
+
+        User student = getCurrentUser(authentication);
+        
+        // Service logic ensures log belongs to student and is currently REJECTED
+        LogEntry updatedLog = logEntryService.resubmitLog(logId, request, student, file);
+        
+        return ResponseEntity.ok(updatedLog);
+    }
+
+    /**
+     * Retrieves all log entries for the authenticated student.
      */
     @GetMapping
     public ResponseEntity<List<LogEntry>> getMyLogs(Authentication authentication) {
@@ -83,7 +99,7 @@ public class LogEntryController {
     }
 
     /**
-     * Allows updating the status of a specific log (e.g., from SUBMITTED to APPROVED).
+     * Update log status (Internal use/Supervisor manual triggers).
      */
     @PatchMapping("/{logId}/status")
     public ResponseEntity<Void> updateLogStatus(
@@ -100,17 +116,14 @@ public class LogEntryController {
     }
 
     /**
-     * Download attached file by relative path (e.g., logs/1/uuid_file.pdf).
-     * Refined path resolution and error handling.
+     * Download log attachment with path traversal protection.
      */
     @GetMapping("/download/{*path}")
     public ResponseEntity<Resource> downloadAttachment(@PathVariable String path) {
         try {
-            // Remove leading slash if present to prevent absolute path traversal
             String cleanPath = path.startsWith("/") ? path.substring(1) : path;
             Path filePath = rootLocation.resolve(cleanPath).normalize();
             
-            // Security check: Ensure the resolved path is still within the rootLocation
             if (!filePath.startsWith(rootLocation.normalize())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
             }
@@ -134,7 +147,7 @@ public class LogEntryController {
     }
 
     /**
-     * Helper method to extract the User entity from the security context.
+     * Extracts user from session.
      */
     private User getCurrentUser(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
