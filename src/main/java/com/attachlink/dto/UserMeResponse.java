@@ -39,4 +39,6 @@ public class UserMeResponse {
     private String registrationNumber;
     
     private String institutionName;
+
+    private String course;
 }
