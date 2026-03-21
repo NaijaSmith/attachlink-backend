@@ -16,6 +16,8 @@
 package com.attachlink.dto;
 
 import com.attachlink.entity.LogStatus;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -23,7 +25,7 @@ import jakarta.validation.constraints.Size;
 
 /**
  * Data Transfer Object for supervisors to review student log entries.
- * Includes status update, feedback, and numeric evaluation score.
+ * Updated with Jackson annotations to support both camelCase and snake_case (Android).
  */
 public class LogReviewRequest {
 
@@ -31,6 +33,8 @@ public class LogReviewRequest {
     private LogStatus status;
 
     @Size(max = 500, message = "Supervisor comments must not exceed 500 characters")
+    @JsonProperty("supervisor_comment") // Primary name for Android/JSON
+    @JsonAlias("supervisorComment")      // Supports camelCase for Web/Java
     private String supervisorComment;
 
     @Min(value = 0, message = "Score cannot be less than 0")
@@ -46,7 +50,7 @@ public class LogReviewRequest {
         this.score = score;
     }
 
-    // Getters and Setters
+    // Getters and Setters with explicit JsonProperty to ensure correct mapping
     public LogStatus getStatus() {
         return status;
     }
@@ -55,10 +59,12 @@ public class LogReviewRequest {
         this.status = status;
     }
 
+    @JsonProperty("supervisor_comment")
     public String getSupervisorComment() {
         return supervisorComment;
     }
 
+    @JsonProperty("supervisor_comment")
     public void setSupervisorComment(String supervisorComment) {
         this.supervisorComment = supervisorComment;
     }

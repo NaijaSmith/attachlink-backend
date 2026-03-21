@@ -13,6 +13,7 @@ package com.attachlink.controller;
 
 import com.attachlink.dto.LogReviewRequest;
 import com.attachlink.service.SupervisorService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,7 @@ import java.security.Principal;
 
 /**
  * REST Controller for Supervisor operations.
- * Enforces security by using the authenticated Principal to filter data.
+ * Optimized to handle Student metadata (Name/RegNo) and validated log reviews.
  */
 @RestController
 @RequestMapping("/api/supervisor")
@@ -35,7 +36,7 @@ public class SupervisorController {
     }
 
     /**
-     * Get a dashboard summary for the supervisor (e.g., pending logs count, total students).
+     * Get a dashboard summary for the supervisor.
      */
     @GetMapping("/dashboard/summary")
     public ResponseEntity<?> getDashboardSummary(Principal principal) {
@@ -55,8 +56,8 @@ public class SupervisorController {
     }
 
     /**
-     * View logs awaiting review specifically for students assigned to the logged-in supervisor.
-     * @param principal The authenticated user (Supervisor/Lecturer)
+     * View logs awaiting review.
+     * Refined to include Student summary (Name and Reg Number) in the response list.
      */
     @GetMapping("/logs/pending")
     public ResponseEntity<?> viewSubmittedLogs(Principal principal) {
@@ -67,13 +68,12 @@ public class SupervisorController {
 
     /**
      * Review a specific log entry.
-     * The service layer will verify if the supervisor is authorized to review this specific log.
-     * Note: Using PATCH as it represents a partial update of the Log resource (status and feedback).
+     * Added @Valid to ensure the supervisor_comment and score meet DTO constraints.
      */
     @PatchMapping("/logs/{logId}/review")
     public ResponseEntity<?> reviewLog(
             @PathVariable Long logId,
-            @RequestBody LogReviewRequest request,
+            @Valid @RequestBody LogReviewRequest request,
             Principal principal) {
 
         return ResponseEntity.ok(
