@@ -29,20 +29,18 @@ import java.util.Optional;
 
 /**
  * Repository interface for LogEntry entity.
- * Provides abstracted data access for internship daily logs and supervisor dashboard metrics.
+ * Refined to support chronological priority for resubmitted logs.
  */
 @Repository
 public interface LogEntryRepository extends JpaRepository<LogEntry, Long> {
 
     /**
      * Retrieves all log entries for a specific student, ordered by date descending.
-     * Primary method for the student's logbook view.
      */
     List<LogEntry> findByStudentOrderByLogDateDesc(User student);
 
     /**
-     * Finds a specific log for a student by date. 
-     * Useful for editing a specific day's entry.
+     * Finds a specific log for a student by date.
      */
     Optional<LogEntry> findByStudentAndLogDate(User student, LocalDate logDate);
 
@@ -53,38 +51,33 @@ public interface LogEntryRepository extends JpaRepository<LogEntry, Long> {
 
     /**
      * Counts total log entries submitted by a student.
-     * Used for calculating internship completion percentage.
      */
     long countByStudent(User student);
 
     /**
      * Counts log entries for a student based on status.
-     * Helps track how many logs have been APPROVED vs REJECTED for a single student.
      */
     long countByStudentAndStatus(User student, LogStatus status);
 
     /**
-     * Retrieves all log entries belonging to students assigned to a specific supervisor, 
-     * filtered by status (e.g., logs awaiting review).
-     * The 'Student_Supervisor' syntax navigates from LogEntry -> Student -> Supervisor.
+     * REFINED: Retrieves all log entries for a supervisor's students, 
+     * ordered by UpdatedAt Descending. This ensures RESUBMITTED logs 
+     * appear at the top of the dashboard immediately.
      */
-    List<LogEntry> findAllByStudent_SupervisorAndStatus(User supervisor, LogStatus status);
+    List<LogEntry> findAllByStudent_SupervisorAndStatusOrderByUpdatedAtDesc(User supervisor, LogStatus status);
 
     /**
      * Counts log entries across all assigned students for a supervisor based on status.
-     * Core requirement for Supervisor Dashboard "Pending Review" metrics.
      */
     long countByStudent_SupervisorAndStatus(User supervisor, LogStatus status);
 
     /**
      * Checks if a log entry already exists for a student on a specific date.
-     * Essential for validating the "One Log Per Day" business rule.
      */
     boolean existsByStudentAndLogDate(User student, LocalDate logDate);
 
     /**
      * Custom query to find logs within a specific date range for a student.
-     * Useful for weekly or monthly report generation.
      */
     @Query("SELECT l FROM LogEntry l WHERE l.student = :student AND l.logDate BETWEEN :startDate AND :endDate ORDER BY l.logDate ASC")
     List<LogEntry> findLogsInDateRange(@Param("student") User student, 

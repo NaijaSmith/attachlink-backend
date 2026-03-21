@@ -68,7 +68,7 @@ public class SupervisorService {
         User supervisor = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Supervisor account not found"));
 
-        return logEntryRepository.findAllByStudent_SupervisorAndStatus(supervisor, LogStatus.SUBMITTED);
+        return logEntryRepository.findAllByStudent_SupervisorAndStatusOrderByUpdatedAtDesc(supervisor, LogStatus.SUBMITTED);
     }
 
     /**
