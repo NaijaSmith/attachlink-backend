@@ -20,6 +20,8 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -51,37 +53,36 @@ public class Evaluation {
      * Qualitative remarks or feedback from the supervisor regarding the work logged.
      */
     @Size(max = 1000, message = "Remarks cannot exceed 1000 characters")
-    @Column(length = 1000)
+    @Column(columnDefinition = "TEXT")
     private String remarks;
 
     /**
      * The specific log entry being evaluated.
+     * Maps to log_entry_id in the database.
      */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "log_entry_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "log_entry_id", nullable = false, unique = true)
     private LogEntry logEntry;
 
     /**
      * The supervisor who performed this evaluation.
-     * Changed type to User to resolve the type mismatch in SupervisorService.reviewLog()
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "supervisor_id", nullable = false)
     private User supervisor;
 
     /**
-     * Timestamp of when the evaluation was recorded.
+     * Timestamp of when the evaluation was first recorded.
+     * Managed automatically by Hibernate.
      */
+    @CreationTimestamp
     @Column(name = "submitted_at", nullable = false, updatable = false)
     private LocalDateTime submittedAt;
 
     /**
-     * Automatically sets the evaluation timestamp before persistence.
+     * Timestamp of the last update to this evaluation.
      */
-    @PrePersist
-    protected void onCreate() {
-        if (this.submittedAt == null) {
-            this.submittedAt = LocalDateTime.now();
-        }
-    }
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

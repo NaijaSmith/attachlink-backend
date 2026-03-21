@@ -26,9 +26,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Service for managing employer feedback on student performance.
+ * Service for managing comprehensive employer feedback on student performance.
+ * Handles calculation of overall performance metrics and role-based validation.
  */
 @Service
 public class EmployerFeedbackService {
@@ -44,8 +46,8 @@ public class EmployerFeedbackService {
     }
 
     /**
-     * Submits feedback for a student from an employer.
-     * Includes role validation to ensure data integrity.
+     * Submits multi-category feedback for a student from an employer.
+     * Automatically calculates the overall mean rating based on individual skill categories.
      */
     @Transactional
     public EmployerFeedback submitFeedback(
@@ -54,7 +56,7 @@ public class EmployerFeedbackService {
 
         // Validate that the reviewer is actually an employer
         if (employer.getRole() != Roles.EMPLOYER) {
-            throw new IllegalArgumentException("Only employers can submit feedback.");
+            throw new IllegalArgumentException("Unauthorized: Only employers can submit performance feedback.");
         }
 
         User student = userRepository.findById(request.getStudentId())
@@ -62,13 +64,26 @@ public class EmployerFeedbackService {
 
         // Validate that the recipient is a student
         if (student.getRole() != Roles.STUDENT) {
-            throw new IllegalArgumentException("Feedback can only be submitted for students.");
+            throw new IllegalArgumentException("Invalid Target: Feedback can only be submitted for student profiles.");
         }
 
         EmployerFeedback feedback = new EmployerFeedback();
         feedback.setEmployer(employer);
         feedback.setStudent(student);
-        feedback.setRating(request.getRating());
+        
+        // Map individual professional categories from the request
+        feedback.setTechnicalSkillsRating(request.getTechnicalSkills());
+        feedback.setCommunicationRating(request.getCommunication());
+        feedback.setPunctualityRating(request.getPunctuality());
+        feedback.setTeamworkRating(request.getTeamworkRating());
+        
+        // Calculate and set the overall mean rating
+        double overall = (request.getTechnicalSkills() + 
+                          request.getCommunication() + 
+                          request.getPunctuality() + 
+                          request.getTeamworkRating()) / 4.0;
+        
+        feedback.setOverallRating((int) overall);
         feedback.setComment(request.getComment());
         feedback.setSubmittedAt(LocalDateTime.now());
 
@@ -78,16 +93,26 @@ public class EmployerFeedbackService {
     /**
      * Retrieves all feedback entries for a specific student.
      */
+    @Transactional(readOnly = true)
     public List<EmployerFeedback> getFeedbackForStudent(User student) {
         if (student.getRole() != Roles.STUDENT) {
-            throw new IllegalArgumentException("The requested user is not a student.");
+            throw new IllegalArgumentException("The requested user profile does not contain student metrics.");
         }
         return feedbackRepository.findByStudent(student);
     }
 
     /**
-     * Retrieves feedback submitted by a specific employer.
+     * Retrieves a summarized skill breakdown for a student's profile analytics.
      */
+    @Transactional(readOnly = true)
+    public Map<String, Double> getStudentPerformanceAnalytics(User student) {
+        return feedbackRepository.getDetailedMetricsForStudent(student);
+    }
+
+    /**
+     * Retrieves feedback history submitted by a specific employer.
+     */
+    @Transactional(readOnly = true)
     public List<EmployerFeedback> getFeedbackByEmployer(User employer) {
         return feedbackRepository.findByEmployer(employer);
     }
