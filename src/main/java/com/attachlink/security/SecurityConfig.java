@@ -49,9 +49,9 @@ public class SecurityConfig {
                 ).permitAll()
 
                 // Role-based access control
-                .requestMatchers("/api/supervisor/**").hasAnyAuthority("ROLE_SUPERVISOR")
-                .requestMatchers("/api/employer/**").hasAnyAuthority("ROLE_EMPLOYER")
-                .requestMatchers("/api/logs/**").hasAnyAuthority("ROLE_STUDENT")
+                .requestMatchers("/api/supervisor/**").hasAnyAuthority("ROLE_SUPERVISOR", "SUPERVISOR")
+                .requestMatchers("/api/employer/**").hasAnyAuthority("ROLE_EMPLOYER", "EMPLOYER")
+                .requestMatchers("/api/logs/**").hasAnyAuthority("ROLE_STUDENT", "STUDENT")
                 .requestMatchers("/api/email/**").authenticated()
 
                 // Authenticated endpoints
