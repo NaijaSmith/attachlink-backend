@@ -95,5 +95,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findAllBySupervisor(User supervisor);
 
+    List<User> findAllByEmployer(User employer);
+
 
 }
