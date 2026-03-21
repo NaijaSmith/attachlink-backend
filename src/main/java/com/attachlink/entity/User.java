@@ -1,25 +1,16 @@
-/*
- * Copyright 2026 Nicholas Kariuki Wambui
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.attachlink.entity;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * User Entity representing Students, Supervisors, and Employers.
+ * Updated with @JsonAlias to bridge the gap between snake_case (Android) 
+ * and camelCase (Spring Boot) during registration and profile updates.
+ */
 @Entity
 @Table(name = "users")
 @Getter 
@@ -44,15 +35,19 @@ public class User {
     private String role; // STUDENT, SUPERVISOR, EMPLOYER, ADMIN
 
     @Column(name = "full_name", length = 100)
+    @JsonAlias({"full_name", "fullName"}) // Support both conventions
     private String fullName;
 
     @Column(name = "institution_name")
+    @JsonAlias({"institution_name", "institutionName", "institution"})
     private String institutionName;
 
     @Column(name = "fcm_token")
+    @JsonAlias("fcm_token")
     private String fcmToken;
 
     @Column(name = "registration_number")
+    @JsonAlias({"registration_number", "registrationNumber"})
     private String registrationNumber;
 
     @Column(name = "course")
@@ -74,28 +69,13 @@ public class User {
     @JsonIgnore
     private User employer;
 
-
     /**
-     * Safely retrieves registration number or default value.
-     */
-    public String getRegistrationNumberDisplay() {
-        return registrationNumber != null ? registrationNumber : "N/A";
-    }
-
-    /**
-     * Returns the first part of the full name for UI greetings.
+     * Logic for UI greetings.
      */
     @JsonProperty("firstName")
     public String getFirstName() {
         if (fullName == null || fullName.trim().isEmpty()) return "User";
         return fullName.trim().split("\\s+")[0];
-    }
-
-    /**
-     * Checks if the user has an associated institution.
-     */
-    public boolean hasValidInstitution() {
-        return institutionName != null && !institutionName.trim().isEmpty();
     }
 
     // Expose names for JSON without circular references

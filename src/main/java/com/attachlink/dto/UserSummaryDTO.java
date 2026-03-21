@@ -15,14 +15,16 @@
  */
 package com.attachlink.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * A lightweight Data Transfer Object used for populating selection dropdowns,
- * lists, and search results in the mobile and web interface.
+ * A lightweight Data Transfer Object used for selection dropdowns and lists.
+ * Refined with Jackson annotations to bridge snake_case (Android) and camelCase (Spring).
  */
 @Data
 @Builder
@@ -32,22 +34,36 @@ public class UserSummaryDTO {
 
     private Long id;
     
+    @JsonProperty("full_name")
+    @JsonAlias("fullName")
     private String fullName;
     
     private String email;
     
+    @JsonProperty("institution_name")
+    @JsonAlias({"institutionName", "institution"})
     private String institutionName;
     
+    @JsonProperty("registration_number")
+    @JsonAlias("registrationNumber")
     private String registrationNumber;
 
     /**
-     * Custom toString method to make debugging easier 
-     * and to provide a clean label for simple UI adapters.
+     * Refined toString for server-side logging and simple adapters.
+     * Matches the logic in the Android UserSummary for consistency.
      */
     @Override
     public String toString() {
-        return registrationNumber != null ? 
-            fullName + " (" + registrationNumber + ")" : 
-            fullName;
+        String name = (fullName != null) ? fullName : "User " + id;
+        
+        if (registrationNumber != null && !registrationNumber.isEmpty()) {
+            return name + " (" + registrationNumber + ")";
+        }
+        
+        if (institutionName != null && !institutionName.isEmpty()) {
+            return name + " [" + institutionName + "]";
+        }
+        
+        return name;
     }
 }

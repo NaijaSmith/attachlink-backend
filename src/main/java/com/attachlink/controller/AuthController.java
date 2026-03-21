@@ -23,6 +23,7 @@ import com.attachlink.repository.UserRepository;
 import com.attachlink.security.JwtUtil;
 import com.attachlink.service.AuthService;
 import com.attachlink.service.PasswordResetService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.*;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
 
 /**
  * REST controller for authentication-related endpoints.
- * Handles user login, registration, session info, and password recovery.
+ * Refined to support @Valid DTO constraints and snake_case mapping for dropdowns.
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -94,9 +95,10 @@ public class AuthController {
 
     /**
      * REGISTER
+     * Refined: Added @Valid to trigger automatic DTO validation.
      */
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
             authService.register(request);
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -110,12 +112,10 @@ public class AuthController {
     }
 
     /**
-     * Fetch list of available Academic Supervisors for the Registration dropdown.
+     * Fetch available Academic Supervisors.
      */
     @GetMapping("/list-supervisors")
     public ResponseEntity<List<UserSummaryDTO>> getSupervisors() {
-        // Optimization: In the future, use userRepository.findByRole("SUPERVISOR") 
-        // to avoid loading the entire user database into memory.
         List<UserSummaryDTO> supervisors = userRepository.findAll().stream()
                 .filter(u -> "SUPERVISOR".equalsIgnoreCase(u.getRole()))
                 .map(this::convertToSummaryDTO)
@@ -124,7 +124,7 @@ public class AuthController {
     }
 
     /**
-     * Fetch list of available Industry Employers for the Registration dropdown.
+     * Fetch available Industry Employers.
      */
     @GetMapping("/list-employers")
     public ResponseEntity<List<UserSummaryDTO>> getEmployers() {
@@ -136,7 +136,8 @@ public class AuthController {
     }
 
     /**
-     * Helper to map User Entity to UserSummaryDTO using the Builder pattern.
+     * Helper to map User Entity to UserSummaryDTO.
+     * Uses the refined DTO which handles snake_case for the Android client.
      */
     private UserSummaryDTO convertToSummaryDTO(User user) {
         return UserSummaryDTO.builder()
@@ -160,7 +161,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Could not send OTP. Please try again later."));
+                    .body(Map.of("error", "Could not send OTP."));
         }
     }
 
