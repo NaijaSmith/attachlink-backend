@@ -83,17 +83,13 @@ public class SupervisorService {
         LogEntry log = logEntryRepository.findById(logId)
                 .orElseThrow(() -> new RuntimeException("Log entry not found with ID: " + logId));
 
-        // SECURITY FIX: Use .getId().equals() or .longValue() comparison
         User student = log.getStudent();
         if (student.getSupervisor() == null || 
-            !student.getSupervisor().getId().equals(supervisor.getId())) {
+            student.getSupervisor().getId().longValue() != supervisor.getId().longValue()) {
             
-            // Console logging to help debug Railway deployments
-            System.err.println("Permission Denied: Actor ID [" + supervisor.getId() + 
-                "] tried to review Log ID [" + logId + 
-                "] assigned to Supervisor ID [" + 
-                (student.getSupervisor() != null ? student.getSupervisor().getId() : "NULL") + "]");
-                
+            System.err.println("Mismatch: Student Supervisor ID: " + (student.getSupervisor() != null ? student.getSupervisor().getId() : "NULL") + 
+                               " vs Logged-in ID: " + supervisor.getId());
+                               
             throw new SecurityException("You do not have permission to review this log.");
         }
 

@@ -55,16 +55,22 @@ public class EmployerFeedbackService {
             User employer) {
 
         // Validate that the reviewer is actually an employer
-        if (employer.getRole() != Roles.EMPLOYER) {
+        if (!"EMPLOYER".equals(employer.getRole())) {
             throw new IllegalArgumentException("Unauthorized: Only employers can submit performance feedback.");
         }
 
         User student = userRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new IllegalArgumentException("Student not found with ID: " + request.getStudentId()));
 
-        // Validate that the recipient is a student
-        if (student.getRole() != Roles.STUDENT) {
+        // Validate student role
+        if (!"STUDENT".equals(student.getRole())) {
             throw new IllegalArgumentException("Invalid Target: Feedback can only be submitted for student profiles.");
+        }
+
+        // Validate assignment
+        if (student.getEmployer() == null || student.getEmployer().getId().longValue() != employer.getId().longValue()) {
+            throw new SecurityException("Unauthorized: You are not assigned to this student. Employer ID: " + employer.getId() + 
+                ", Expected: " + (student.getEmployer() != null ? student.getEmployer().getId() : "NULL"));
         }
 
         EmployerFeedback feedback = new EmployerFeedback();
