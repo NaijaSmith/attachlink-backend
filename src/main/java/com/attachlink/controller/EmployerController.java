@@ -30,7 +30,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/employer")
-@PreAuthorize("hasRole('ROLE_EMPLOYER')")
+@PreAuthorize("hasAnyAuthority('ROLE_EMPLOYER', 'EMPLOYER')")
 public class EmployerController {
 
     private final EmployerService employerService;
