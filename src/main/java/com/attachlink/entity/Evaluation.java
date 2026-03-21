@@ -68,7 +68,7 @@ public class Evaluation {
      * The supervisor who performed this evaluation.
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supervisor_id", nullable = false)
+    @JoinColumn(name = "supervisor_id", referencedColumnName = "id")
     private User supervisor;
 
     /**
