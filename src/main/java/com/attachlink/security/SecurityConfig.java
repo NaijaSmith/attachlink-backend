@@ -52,6 +52,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/supervisor/**").hasAnyAuthority("ROLE_SUPERVISOR")
                 .requestMatchers("/api/employer/**").hasAnyAuthority("ROLE_EMPLOYER")
                 .requestMatchers("/api/logs/**").hasAnyAuthority("ROLE_STUDENT")
+                .requestMatchers("/api/email/**").authenticated()
 
                 // Authenticated endpoints
                 .requestMatchers(
