@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.attachlink.security;
 
 import com.attachlink.entity.User;
@@ -24,13 +25,12 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Service implementation for loading user-specific data during authentication.
- * Refined to decouple the JPA Entity from the Security UserDetails.
+ * Refined to support both hasRole() and hasAuthority() by granting dual authorities.
  */
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -41,11 +41,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         this.userRepository = userRepository;
     }
 
-    /**
-     * Locates the user based on the email.
-     * Use @Transactional(readOnly = true) to ensure the session stays open 
-     * if you later decide to use Lazy-loaded Roles or Authorities.
-     */
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -56,31 +51,30 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     /**
      * Maps the database User entity to a Spring Security UserDetails object.
-     * This separates domain logic from security requirements.
+     * Grants dual authorities (Raw + ROLE_ prefix) to fix 403 Forbidden issues.
      */
     private UserDetails createSpringSecurityUser(User user) {
-        String roleName = Optional.ofNullable(user.getRole())
-                .map(String::trim)
-                .map(String::toUpperCase)
-                .orElse("STUDENT");
+        String rawRole = (user.getRole() != null) ? user.getRole().trim().toUpperCase() : "STUDENT";
 
-        // Ensure the ROLE_ prefix is present for Spring Security hasRole() compatibility
-        if (!roleName.startsWith("ROLE_")) {
-            roleName = "ROLE_" + roleName;
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        
+        // 1. Add raw authority (e.g., "SUPERVISOR") for .hasAuthority()
+        authorities.add(new SimpleGrantedAuthority(rawRole));
+
+        // 2. Add prefixed authority (e.g., "ROLE_SUPERVISOR") for .hasRole()
+        if (!rawRole.startsWith("ROLE_")) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + rawRole));
         }
-
-        List<SimpleGrantedAuthority> authorities = Collections.singletonList(
-                new SimpleGrantedAuthority(roleName)
-        );
 
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
-                .password(user.getPassword()) // Assumed already BCrypt encoded
+                .password(user.getPassword())
                 .authorities(authorities)
+                // Link account status to your Entity's 'active' field
+                .disabled(!user.isActive()) 
                 .accountExpired(false)
                 .accountLocked(false)
                 .credentialsExpired(false)
-                .disabled(false)
                 .build();
     }
 }

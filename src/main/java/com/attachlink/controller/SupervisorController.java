@@ -26,7 +26,7 @@ import java.security.Principal;
  */
 @RestController
 @RequestMapping("/api/supervisor")
-@PreAuthorize("hasAuthority('SUPERVISOR')")
+@PreAuthorize("hasAuthority('SUPERVISOR', 'ROLE_SUPERVISOR')")
 public class SupervisorController {
 
     private final SupervisorService supervisorService;
