@@ -46,7 +46,12 @@ public enum LogStatus {
     /**
      * The entry was sent back for corrections or dismissed.
      */
-    REJECTED("Rejected");
+    REJECTED("Rejected"),
+
+    /**
+     * The entry was edited and resubmitted.
+     */
+    RESUBMITTED("Resubmitted");
 
     private final String displayName;
 

@@ -89,7 +89,7 @@ public class LogEntryService {
 
     /**
      * Handles student resubmission of a REJECTED log.
-     * Updates text fields, optionally replaces the file, and resets status to SUBMITTED.
+     * Updates text fields, optionally replaces the file, and resets status to RESUBMITTED.
      */
     @Transactional
     public LogEntry resubmitLog(Long logId, LogEntryRequest request, User student, MultipartFile attachment) {
@@ -116,8 +116,8 @@ public class LogEntryService {
             handleFileAttachment(log, student, attachment);
         }
 
-        // 5. Reset Status & Track Update Time
-        log.setStatus(LogStatus.SUBMITTED);
+        // 5. SET STATUS TO RESUBMITTED & Track Update Time
+        log.setStatus(LogStatus.RESUBMITTED);
         log.setUpdatedAt(LocalDateTime.now());
 
         LogEntry updatedLog = logEntryRepository.save(log);
