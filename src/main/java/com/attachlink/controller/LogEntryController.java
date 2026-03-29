@@ -118,33 +118,50 @@ public class LogEntryController {
     /**
      * Download log attachment with path traversal protection.
      */
-    @GetMapping("/download/{*path}")
-    public ResponseEntity<Resource> downloadAttachment(@PathVariable String path) {
-        try {
-            String cleanPath = path.startsWith("/") ? path.substring(1) : path;
-            Path filePath = rootLocation.resolve(cleanPath).normalize();
-            
-            if (!filePath.startsWith(rootLocation.normalize())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
-            }
-
-            Resource resource = new UrlResource(filePath.toUri());
-
-            if (resource.exists() || resource.isReadable()) {
-                String filename = filePath.getFileName().toString();
-                return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .body(resource);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (MalformedURLException e) {
-            return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+   @GetMapping("/download/{*path}")
+public ResponseEntity<Resource> downloadAttachment(@PathVariable String path) {
+    try {
+        // 1. Clean the incoming path from the URL
+        // Example: "/logs/4/file.pdf" -> "logs/4/file.pdf"
+        String cleanPath = path.startsWith("/") ? path.substring(1) : path;
+        
+        // 2. Use Absolute Paths for the security check. 
+        // This is crucial for Railway/Cloud environments where relative paths 
+        // can resolve to unexpected root locations.
+        Path rootAbs = rootLocation.toAbsolutePath().normalize();
+        Path fileAbs = rootAbs.resolve(cleanPath).normalize();
+        
+        // 3. Path Traversal Protection: 
+        // Ensure the requested file is physically located inside the upload directory.
+        if (!fileAbs.startsWith(rootAbs)) {
+            // Log this for debugging purposes during your presentation prep
+            System.err.println("Security Block: Attempted access outside root: " + fileAbs);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+
+        Resource resource = new UrlResource(fileAbs.toUri());
+
+        // 4. File existence and readability check
+        if (resource.exists() && resource.isReadable()) {
+            String filename = fileAbs.getFileName().toString();
+            
+            // Set content type to OCTET_STREAM to force a download in the browser/app
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        
+    } catch (MalformedURLException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    } catch (Exception e) {
+        // Catch-all for IO errors or permission issues on the server disk
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
+}
 
     /**
      * Extracts user from session.
